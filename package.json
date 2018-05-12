@@ -1,0 +1,38 @@
+{
+  "name": "formula1js",
+  "version": "0.1.0",
+  "description": "Execute Excel formula in JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "compile:dev": "babel-node src/index.js",
+    "build:dist": "babel src/index.js --out-file ./dist/index.js",
+    "test": "npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khanhhua/formula1js.git"
+  },
+  "keywords": [
+    "formula",
+    "excel",
+    "execution"
+  ],
+  "author": "Khanh Hua",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khanhhua/formula1js/issues"
+  },
+  "homepage": "https://github.com/khanhhua/formula1js#readme",
+  "dependencies": {
+    "excel-formula-ast": "^1.1.1",
+    "excel-formula-tokenizer": "^2.3.0",
+    "lodash": "^4.17.10",
+    "minimist": "^1.2.0",
+    "xlsx": "^0.12.12"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "chai": "^4.1.2"
+  }
+}
