@@ -1,3 +1,10 @@
+// Static Link
+var EXCEL = {};
+var formulajs = require("formulajs");
+Object.keys(formulajs).forEach(function(key) {
+  EXCEL[key] = formulajs[key]
+});
+
 // Static Data section
 /**
  * Upon calls to `execute`, $ is updated accordingly.
@@ -45,6 +52,7 @@ var $ = {};
 <%= section.definition %>
 <% }) %>
 
+<% if(dynamicDataSections && dynamicDataSections.length) { %>
 function $$(cell) {
   switch (cell) {
     <% _.forEach(dynamicDataSections, function (section) { %>
@@ -52,6 +60,7 @@ function $$(cell) {
     <% }) %>
   }
 }
+<% } %>
 
 // Public section
 /**
@@ -59,5 +68,16 @@ function $$(cell) {
  * @param params {Map<string,*>} Variadic parameters to update $
  */
 exports.execute = function(address) {
+  var params = arguments.length === 2 ? arguments[1]: null;
+  if (params) {
+    Object.keys(params).forEach(function(key) {
+      $[key] = params[key];
+    });
+  }
 
+  switch (address) {
+    <% _.forEach(publicSections, function (section) { %>
+    case "<%= section.address %>": return (<%= section.definition %>)();
+    <% }) %>
+  }
 };

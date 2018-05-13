@@ -62,4 +62,4 @@ typings/
 
 .idea
 dist/*.js
-output/*.js
+**/output/**/*.js

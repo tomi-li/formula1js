@@ -30,11 +30,12 @@ export default function (config, excelFile) {
   const codeGen = new CodeGen(workbook);
   const sections = _.map(outputs, (address) => {
     const cell = codeGen.getCellByAddress(address);
-    return cellToDynamicSection(codeGen, cell);
+    return cellToPublicSection(codeGen, cell);
   });
 
   return mainTemplate({
-    dynamicDataSections: sections
+    publicSections: sections,
+    dynamicDataSections: []
   });
 }
 
@@ -42,7 +43,7 @@ export default function (config, excelFile) {
  * @param codeGen {CodeGen}
  * @param formula {string}
  */
-export function cellToDynamicSection(codeGen, cell) {
+export function cellToPublicSection(codeGen, cell) {
   const {formula, address} = cell;
   visit(buildTree(tokenize(formula)), codeGen);
 

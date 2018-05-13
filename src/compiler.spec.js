@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { default as compiler, cellToDynamicSection, CodeGen } from './compiler';
+import { default as compiler, cellToPublicSection, CodeGen } from './compiler';
 import {Node} from "excel-formula-ast/index";
 
 describe('compiler', () => {
@@ -41,7 +41,7 @@ describe('formulaToCode', () => {
       formula: 'NOW()'
     };
 
-    const actual = cellToDynamicSection(codeGen, cell);
+    const actual = cellToPublicSection(codeGen, cell);
     expect(actual).to.deep.equal({
       name: 'funSheet1$A1',
       address: 'Sheet1!A1',
