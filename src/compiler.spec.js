@@ -89,8 +89,6 @@ describe('CodeGen', () => {
       expect(codeGen.enterUnaryExpression.length).to.be.equal(1);
     });
 
-
-
     it('must have enterNumber(node)', () => {
       expect(codeGen.enterNumber).to.be.a('function');
       expect(codeGen.enterNumber.length).to.be.equal(1);
@@ -104,6 +102,16 @@ describe('CodeGen', () => {
     it('must have setCurrentSheet(sheetName)', () => {
       expect(codeGen.setCurrentSheet).to.be.a('function');
       expect(codeGen.setCurrentSheet.length).to.be.equal(1);
+    });
+  });
+
+  describe('assertSheetNameFromAddress(address)', () => {
+    it('throws error when address does not have sheet name', () => {
+      expect(() => CodeGen.assertSheetNameFromAddress('A1')).to.throw();
+    });
+
+    it('returns the sheet name from address', () => {
+      expect(CodeGen.assertSheetNameFromAddress('Sheet1!A1')).to.be.equal('Sheet1');
     });
   });
 
@@ -146,7 +154,41 @@ describe('CodeGen', () => {
       expect(actual).to.equal('EXCEL.SUM(1)');
     });
 
-    it('generate function with one cell param', () => {
+    it('generate function with one cell param, which is a constant', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              v: 1,
+              format: 'general',
+              dataType: 'String'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell',
+            key: 'B4',
+            refType: 'relative'
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCell(node.arguments[0]);
+      codeGen.exitCell(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1)');
+    });
+
+    it('generate function with one cell param, which is contains a formula', () => {
 
     });
 

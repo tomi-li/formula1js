@@ -29,6 +29,8 @@ export default function (config, excelFile) {
 
   const codeGen = new CodeGen(workbook);
   const sections = _.map(outputs, (address) => {
+    codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+
     const cell = codeGen.getCellByAddress(address);
     return cellToPublicSection(codeGen, cell);
   });
@@ -61,6 +63,23 @@ export function cellToPublicSection(codeGen, cell) {
  * JS CodeGenerator
  */
 export class CodeGen {
+  static NotImplemented() {
+    return new Error('Not Implemented');
+  };
+
+  static InvalidEntry() {
+    return new Error('Invalid Entry');
+  }
+
+  static assertSheetNameFromAddress(addressString) {
+    if (addressString.indexOf('!') === -1) {
+      throw CodeGen.InvalidEntry();
+    }
+
+    const [sheetName, ] = addressString.split('!');
+    return sheetName;
+  }
+
   constructor(workbook) {
     this.buffer = [];
     this.nodeStack = [];
@@ -86,7 +105,31 @@ export class CodeGen {
   }
 
   enterCell(node) {
+    console.log(`cell is ${node.key}`);
+    this.nodeStack.push(node);
 
+    const {key: address} = node;
+    const cell = this.getCellByAddress(address);
+
+    if (cell.formula) {
+      throw CodeGen.NotImplemented();
+    } else {
+      const {value} = cell;
+
+      if (this.isNowFunctionParam()) {
+        if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
+          this.buffer.push(', ' + value);
+        } else {
+          this.buffer.push('' + value);
+        }
+      } else {
+        this.buffer.push(value);
+      }
+    }
+  }
+
+  exitCell(node) {
+    this.nodeStack.pop();
   }
 
   enterCellRange(node) {}
@@ -95,14 +138,15 @@ export class CodeGen {
     console.log(`number is ${node.value}`);
     this.nodeStack.push(node);
 
+    const {value} = node;
     if (this.isNowFunctionParam()) {
       if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
-        this.buffer.push(', ' + node.value);
+        this.buffer.push(', ' + value);
       } else {
-        this.buffer.push('' + node.value);
+        this.buffer.push('' + value);
       }
     } else {
-      this.buffer.push(node.value);
+      this.buffer.push(value);
     }
   }
 
@@ -155,15 +199,17 @@ export class CodeGen {
       [sheet, addr] = addressString.split('!');
 
     } else {
-      sheet = codeGen.currentSheet;
+      sheet = this.currentSheet;
       addr = addressString;
     }
 
+    console.log(`Accessing sheet ${sheet} cell ${addr}...`)
     const cell = this.workbook.Sheets[sheet][addr];
     return {
       address: `${sheet}!${addr}`,
       formula: cell.f,
       format: cell.F,
+      value: cell.v,
       dataType: cell.t
     }
   }

@@ -7,7 +7,7 @@ describe('Zero param cells', () => {
     // TODO compiled.reset()
   })
 
-  it('Must evaluate NOW()', () => {
+  it('Must evaluate Sheet1!B2 = NOW()', () => {
     let actual = compiled.execute('Sheet1!B2');
     expect(moment(actual).isValid()).to.be.true;
     expect(moment(actual).diff(moment())).to.be.below(1000);
@@ -20,8 +20,13 @@ describe('One param cells', () => {
     // TODO compiled.reset()
   })
 
-  it('Must evaluate SUM(1)', () => {
+  it('Must evaluate Sheet1!B5 = SUM(1)', () => {
     let actual = compiled.execute('Sheet1!B5');
+    expect(actual).to.be.equal(1);
+  });
+
+  it('Must evaluate Sheet1!B7 = SUM(B4)', () => {
+    let actual = compiled.execute('Sheet1!B7');
     expect(actual).to.be.equal(1);
   });
 });
