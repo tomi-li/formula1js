@@ -128,7 +128,22 @@ describe('CodeGen', () => {
     });
 
     it('generate function with one static param', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'number',
+            value: 1
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterNumber(node.arguments[0]);
+      codeGen.exitNumber(node.arguments[0]);
+      codeGen.exitFunction(node);
 
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1)');
     });
 
     it('generate function with one cell param', () => {

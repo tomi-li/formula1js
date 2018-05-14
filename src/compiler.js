@@ -45,6 +45,8 @@ export default function (config, excelFile) {
  */
 export function cellToPublicSection(codeGen, cell) {
   const {formula, address} = cell;
+
+  console.log(`Compiling cell[${address}] with formula ${formula}...`);
   visit(buildTree(tokenize(formula)), codeGen);
 
   const name = `fun${address.replace('!','$')}`;
@@ -68,13 +70,15 @@ export class CodeGen {
   enterFunction(node) {
     console.log(`function is ${node.name}`);
     if (node.arguments.length === 0) {
-      this.buffer.push(`EXCEL.${node.name}()`);
+      this.buffer.push(`EXCEL.${node.name}(`);
     } else {
-      // TODO Handle non-empty args functions
+      this.buffer.push(`EXCEL.${node.name}(`);
     }
   }
 
-  exitFunction(node) {}
+  exitFunction(node) {
+    this.buffer.push(`)`);
+  }
 
   enterCell(node) {
 
@@ -83,10 +87,20 @@ export class CodeGen {
   enterCellRange(node) {}
 
   enterNumber(numberNode) {
-    console.log(`number is ${numberNode.value}`)
+    console.log(`number is ${numberNode.value}`);
+    this.buffer.push(numberNode.value);
+;  }
+
+  exitNumber(numberNode) {
+
   }
 
-  enterText(node) {}
+  enterText(node) {
+    console.log(`text is ${numberNode.value}`);
+    this.buffer.push(numberNode.value);
+  }
+
+  exitText(node) {}
 
   enterLogical(node) {}
 
@@ -132,7 +146,10 @@ export class CodeGen {
    * @returns {number}
    */
   jsCode() {
-    return this.buffer.pop();
+    const output = this.buffer.join('');
+
+    this.buffer = [];
+    return output;
   }
 
   setCurrentSheet(sheetName) {

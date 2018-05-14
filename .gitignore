@@ -63,3 +63,5 @@ typings/
 .idea
 dist/*.js
 **/output/**/*.js
+.DS_Store
+~$*.xlsx
