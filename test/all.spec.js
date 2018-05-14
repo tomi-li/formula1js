@@ -27,5 +27,10 @@ describe('One param cells', () => {
 });
 
 describe('Two param cells', () => {
+  const compiled = require('./output/compiled.js');
 
+  it('Must evaluate SUM(1,2)', () => {
+    let actual = compiled.execute('Sheet1!B6');
+    expect(actual).to.be.equal(3);
+  });
 });

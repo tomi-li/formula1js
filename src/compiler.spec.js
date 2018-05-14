@@ -154,8 +154,29 @@ describe('CodeGen', () => {
 
     });
 
-    it('generate function with two params', () => {
+    it('generate function with two static params', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'number',
+            value: 1
+          },
+          {
+            type: 'number',
+            value: 2
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterNumber(node.arguments[0]);
+      codeGen.exitNumber(node.arguments[0]);
+      codeGen.enterNumber(node.arguments[1]);
+      codeGen.exitNumber(node.arguments[1]);
+      codeGen.exitFunction(node);
 
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1, 2)');
     });
   });
 

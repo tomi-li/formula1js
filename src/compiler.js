@@ -63,12 +63,16 @@ export function cellToPublicSection(codeGen, cell) {
 export class CodeGen {
   constructor(workbook) {
     this.buffer = [];
+    this.nodeStack = [];
+
     this.currentSheet = null;
     this.workbook = workbook;
   }
 
   enterFunction(node) {
     console.log(`function is ${node.name}`);
+    this.nodeStack.push(node);
+
     if (node.arguments.length === 0) {
       this.buffer.push(`EXCEL.${node.name}(`);
     } else {
@@ -77,6 +81,7 @@ export class CodeGen {
   }
 
   exitFunction(node) {
+    this.nodeStack.pop();
     this.buffer.push(`)`);
   }
 
@@ -86,17 +91,28 @@ export class CodeGen {
 
   enterCellRange(node) {}
 
-  enterNumber(numberNode) {
-    console.log(`number is ${numberNode.value}`);
-    this.buffer.push(numberNode.value);
-;  }
+  enterNumber(node) {
+    console.log(`number is ${node.value}`);
+    this.nodeStack.push(node);
+
+    if (this.isNowFunctionParam()) {
+      if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
+        this.buffer.push(', ' + node.value);
+      } else {
+        this.buffer.push('' + node.value);
+      }
+    } else {
+      this.buffer.push(node.value);
+    }
+  }
 
   exitNumber(numberNode) {
-
+    this.nodeStack.pop();
   }
 
   enterText(node) {
     console.log(`text is ${numberNode.value}`);
+    this.nodeStack.push(node);
     this.buffer.push(numberNode.value);
   }
 
@@ -110,6 +126,23 @@ export class CodeGen {
 
   }
 
+  getParentNode() {
+    const len = this.nodeStack.length;
+    if (len > 1) {
+      return this.nodeStack[len - 2];
+    } else {
+      return null;
+    }
+  }
+
+  isNowFunctionParam() {
+    const node = this.getParentNode();
+    if (node) {
+      return node.type === 'function';
+    }
+
+    return false;
+  }
   /**
    *
    * @param workbook {WorkBook}
@@ -149,6 +182,7 @@ export class CodeGen {
     const output = this.buffer.join('');
 
     this.buffer = [];
+    this.nodeStack = [];
     return output;
   }
 
