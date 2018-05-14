@@ -29,6 +29,8 @@ export default function (config, excelFile) {
 
   const codeGen = new CodeGen(workbook);
   const sections = _.map(outputs, (address) => {
+    codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+
     const cell = codeGen.getCellByAddress(address);
     return cellToPublicSection(codeGen, cell);
   });
@@ -45,6 +47,8 @@ export default function (config, excelFile) {
  */
 export function cellToPublicSection(codeGen, cell) {
   const {formula, address} = cell;
+
+  console.log(`Compiling cell[${address}] with formula ${formula}...`);
   visit(buildTree(tokenize(formula)), codeGen);
 
   const name = `fun${address.replace('!','$')}`;
@@ -59,34 +63,104 @@ export function cellToPublicSection(codeGen, cell) {
  * JS CodeGenerator
  */
 export class CodeGen {
+  static NotImplemented() {
+    return new Error('Not Implemented');
+  };
+
+  static InvalidEntry() {
+    return new Error('Invalid Entry');
+  }
+
+  static assertSheetNameFromAddress(addressString) {
+    if (addressString.indexOf('!') === -1) {
+      throw CodeGen.InvalidEntry();
+    }
+
+    const [sheetName, ] = addressString.split('!');
+    return sheetName;
+  }
+
   constructor(workbook) {
     this.buffer = [];
+    this.nodeStack = [];
+
     this.currentSheet = null;
     this.workbook = workbook;
   }
 
   enterFunction(node) {
     console.log(`function is ${node.name}`);
+    this.nodeStack.push(node);
+
     if (node.arguments.length === 0) {
-      this.buffer.push(`EXCEL.${node.name}()`);
+      this.buffer.push(`EXCEL.${node.name}(`);
     } else {
-      // TODO Handle non-empty args functions
+      this.buffer.push(`EXCEL.${node.name}(`);
     }
   }
 
-  exitFunction(node) {}
+  exitFunction(node) {
+    this.nodeStack.pop();
+    this.buffer.push(`)`);
+  }
 
   enterCell(node) {
+    console.log(`cell is ${node.key}`);
+    this.nodeStack.push(node);
 
+    const {key: address} = node;
+    const cell = this.getCellByAddress(address);
+
+    if (cell.formula) {
+      throw CodeGen.NotImplemented();
+    } else {
+      const {value} = cell;
+
+      if (this.isNowFunctionParam()) {
+        if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
+          this.buffer.push(', ' + value);
+        } else {
+          this.buffer.push('' + value);
+        }
+      } else {
+        this.buffer.push(value);
+      }
+    }
+  }
+
+  exitCell(node) {
+    this.nodeStack.pop();
   }
 
   enterCellRange(node) {}
 
-  enterNumber(numberNode) {
-    console.log(`number is ${numberNode.value}`)
+  enterNumber(node) {
+    console.log(`number is ${node.value}`);
+    this.nodeStack.push(node);
+
+    const {value} = node;
+    if (this.isNowFunctionParam()) {
+      if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
+        this.buffer.push(', ' + value);
+      } else {
+        this.buffer.push('' + value);
+      }
+    } else {
+      this.buffer.push(value);
+    }
   }
 
-  enterText(node) {}
+  exitNumber(numberNode) {
+    this.nodeStack.pop();
+  }
+
+  enterText(node) {
+    console.log(`text is ${numberNode.value}`);
+    this.nodeStack.push(node);
+    this.buffer.push(numberNode.value);
+  }
+
+  exitText(node) {}
 
   enterLogical(node) {}
 
@@ -96,6 +170,23 @@ export class CodeGen {
 
   }
 
+  getParentNode() {
+    const len = this.nodeStack.length;
+    if (len > 1) {
+      return this.nodeStack[len - 2];
+    } else {
+      return null;
+    }
+  }
+
+  isNowFunctionParam() {
+    const node = this.getParentNode();
+    if (node) {
+      return node.type === 'function';
+    }
+
+    return false;
+  }
   /**
    *
    * @param workbook {WorkBook}
@@ -108,15 +199,17 @@ export class CodeGen {
       [sheet, addr] = addressString.split('!');
 
     } else {
-      sheet = codeGen.currentSheet;
+      sheet = this.currentSheet;
       addr = addressString;
     }
 
+    console.log(`Accessing sheet ${sheet} cell ${addr}...`)
     const cell = this.workbook.Sheets[sheet][addr];
     return {
       address: `${sheet}!${addr}`,
       formula: cell.f,
       format: cell.F,
+      value: cell.v,
       dataType: cell.t
     }
   }
@@ -132,7 +225,11 @@ export class CodeGen {
    * @returns {number}
    */
   jsCode() {
-    return this.buffer.pop();
+    const output = this.buffer.join('');
+
+    this.buffer = [];
+    this.nodeStack = [];
+    return output;
   }
 
   setCurrentSheet(sheetName) {

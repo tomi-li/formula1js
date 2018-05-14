@@ -89,8 +89,6 @@ describe('CodeGen', () => {
       expect(codeGen.enterUnaryExpression.length).to.be.equal(1);
     });
 
-
-
     it('must have enterNumber(node)', () => {
       expect(codeGen.enterNumber).to.be.a('function');
       expect(codeGen.enterNumber.length).to.be.equal(1);
@@ -107,14 +105,24 @@ describe('CodeGen', () => {
     });
   });
 
-  describe('enterFunction(node)', () => {
+  describe('assertSheetNameFromAddress(address)', () => {
+    it('throws error when address does not have sheet name', () => {
+      expect(() => CodeGen.assertSheetNameFromAddress('A1')).to.throw();
+    });
+
+    it('returns the sheet name from address', () => {
+      expect(CodeGen.assertSheetNameFromAddress('Sheet1!A1')).to.be.equal('Sheet1');
+    });
+  });
+
+  describe('Function node transformation', () => {
     let codeGen;
     beforeEach(() => {
       codeGen = new CodeGen();
       codeGen.setCurrentSheet('Sheet1');
     });
 
-    it('generate function with zero params', () => {
+    it('generates function with zero params', () => {
       const node = {
         type: 'function',
         name: 'NOW',
@@ -127,20 +135,136 @@ describe('CodeGen', () => {
       expect(actual).to.equal('EXCEL.NOW()');
     });
 
-    it('generate function with one static param', () => {
+    it('generates function with one static param', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'number',
+            value: 1
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterNumber(node.arguments[0]);
+      codeGen.exitNumber(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1)');
+    });
+
+    it('generates function with one cell param, which is a constant', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              v: 1,
+              format: 'general',
+              dataType: 'String'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell',
+            key: 'B4',
+            refType: 'relative'
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCell(node.arguments[0]);
+      codeGen.exitCell(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1)');
+    });
+
+    it('generates function with one cell param, which is contains a formula', () => {
 
     });
 
-    it('generate function with one cell param', () => {
+    it('generates function with one cell-range param', () => {
 
     });
 
-    it('generate function with one cell-range param', () => {
+    it('generates function with two static params', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'number',
+            value: 1
+          },
+          {
+            type: 'number',
+            value: 2
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterNumber(node.arguments[0]);
+      codeGen.exitNumber(node.arguments[0]);
+      codeGen.enterNumber(node.arguments[1]);
+      codeGen.exitNumber(node.arguments[1]);
+      codeGen.exitFunction(node);
 
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1, 2)');
     });
 
-    it('generate function with two params', () => {
+    it('generates function with two cell reference params, which are constants themselves', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              v: 1,
+              format: 'general',
+              dataType: 'String'
+            },
+            'B5': {
+              v: 2,
+              format: 'general',
+              dataType: 'String'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
 
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell',
+            key: 'B4',
+            refType: 'relative'
+          },
+          {
+            type: 'cell',
+            key: 'B5',
+            refType: 'relative'
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCell(node.arguments[0]);
+      codeGen.exitCell(node.arguments[0]);
+      codeGen.enterCell(node.arguments[1]);
+      codeGen.exitCell(node.arguments[1]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(1, 2)');
     });
   });
 
