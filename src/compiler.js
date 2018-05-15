@@ -139,12 +139,17 @@ export class CodeGen {
     let value;
 
     if (cell.formula) {
-      this.enterScope();
-      const section = cellToFunModel(this, cell);
-      this.dynamicSections.push(section);
-      this.exitScope();
+      const existing = this.dynamicSections.find(it => it.address === cell.address);
+      if (existing) {
+        value = `$$("${cell.address}")`;
+      } else {
+        this.enterScope();
+        const section = cellToFunModel(this, cell);
+        this.dynamicSections.push(section);
+        this.exitScope();
 
-      value = `$$("${cell.address}")`;
+        value = `$$("${cell.address}")`;
+      }
 
       if (this.buffer.length > 1 && this.buffer[this.buffer.length - 2].lastIndexOf("(") !== -1) {
         this.buffer.push(', ' + value);
