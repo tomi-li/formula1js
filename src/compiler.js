@@ -32,12 +32,12 @@ export default function (config, excelFile) {
     codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
     const cell = codeGen.getCellByAddress(address);
-    return cellToPublicSection(codeGen, cell);
+    return cellToFunModel(codeGen, cell);
   });
 
   return mainTemplate({
     publicSections: sections,
-    dynamicDataSections: []
+    dynamicDataSections: codeGen.dynamicSections
   });
 }
 
@@ -45,7 +45,7 @@ export default function (config, excelFile) {
  * @param codeGen {CodeGen}
  * @param formula {string}
  */
-export function cellToPublicSection(codeGen, cell) {
+export function cellToFunModel(codeGen, cell) {
   const {formula, address} = cell;
 
   console.log(`Compiling cell[${address}] with formula ${formula}...`);
@@ -81,11 +81,36 @@ export class CodeGen {
   }
 
   constructor(workbook) {
-    this.buffer = [];
-    this.nodeStack = [];
+    const _buffer = [];
+    const _nodeStack = [];
+    this._scopes = [
+      {
+        buffer: _buffer,
+        nodeStack: _nodeStack
+      }
+
+    ];
+    this._buffer = _buffer;
+    this._nodeStack = _nodeStack;
 
     this.currentSheet = null;
     this.workbook = workbook;
+
+    this.dynamicSections = [];
+  }
+
+  get buffer() {
+    return this._buffer;
+  }
+
+  get nodeStack() {
+    return this._nodeStack;
+  }
+
+  flush() {
+    const flushed = this._buffer.splice(0, this._buffer.length);
+    this._nodeStack = [];
+    return flushed;
   }
 
   enterFunction(node) {
@@ -108,13 +133,31 @@ export class CodeGen {
     console.log(`cell is ${node.key}`);
     this.nodeStack.push(node);
 
-    const {key: address} = node;
+    const address = node.key;
     const cell = this.getCellByAddress(address);
 
+    let value;
+
     if (cell.formula) {
-      throw CodeGen.NotImplemented();
+      const existing = this.dynamicSections.find(it => it.address === cell.address);
+      if (existing) {
+        value = `$$("${cell.address}")`;
+      } else {
+        this.enterScope();
+        const section = cellToFunModel(this, cell);
+        this.dynamicSections.push(section);
+        this.exitScope();
+
+        value = `$$("${cell.address}")`;
+      }
+
+      if (this.buffer.length > 1 && this.buffer[this.buffer.length - 2].lastIndexOf("(") !== -1) {
+        this.buffer.push(', ' + value);
+      } else {
+        this.buffer.push('' + value);
+      }
     } else {
-      const {value} = cell;
+      value = cell.value;
 
       if (this.isNowFunctionParam()) {
         if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
@@ -168,6 +211,28 @@ export class CodeGen {
 
   enterUnaryExpression(unaryNode) {
 
+  }
+
+  enterScope() {
+    const _buffer = [];
+    const _nodeStack = [];
+    this._scopes.push({
+      buffer: _buffer,
+      nodeStack: _nodeStack
+    });
+    this._buffer = _buffer;
+    this._nodeStack = _nodeStack;
+  }
+
+  exitScope() {
+    if (this._buffer.length !== 0) {
+      console.warn('Current buffer is not empty. Exiting scope...')
+    }
+
+    this._scopes.pop();
+    const scope = this._scopes[this._scopes.length - 1];
+    this._buffer = scope.buffer;
+    this._nodeStack = scope.nodeStack;
   }
 
   getParentNode() {
@@ -225,10 +290,9 @@ export class CodeGen {
    * @returns {number}
    */
   jsCode() {
-    const output = this.buffer.join('');
+    const flushed = this.flush();
+    const output = flushed.join('');
 
-    this.buffer = [];
-    this.nodeStack = [];
     return output;
   }
 
