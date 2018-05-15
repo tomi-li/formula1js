@@ -240,6 +240,31 @@ describe('CodeGen', () => {
 
     });
 
+    it('generates function with one function param', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'function',
+            name: 'SUM',
+            arguments: [{
+              type: 'number',
+              value: 1
+            }]
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterFunction(node.arguments[0]);
+      codeGen.enterNumber(node.arguments[0].arguments[0]);
+      codeGen.exitNumber(node.arguments[0].arguments[0]);
+      codeGen.exitFunction(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(EXCEL.SUM(1))');
+    });
+
     it('generates function with two static params', () => {
       const node = {
         type: 'function',
@@ -359,6 +384,84 @@ describe('CodeGen', () => {
 
       const actual = codeGen.jsCode();
       expect(actual).to.equal('EXCEL.SUM($$("Sheet1!B4"), $$("Sheet1!B5"))');
+    });
+
+    it('generates function with two function params', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'function',
+            name: 'NOW',
+            arguments: []
+          },
+          {
+            type: 'function',
+            name: 'SUM',
+            arguments: [{
+              type: 'number',
+              value: 2
+            }]
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterFunction(node.arguments[0]);
+      codeGen.exitFunction(node.arguments[0]);
+      codeGen.enterFunction(node.arguments[1]);
+      codeGen.enterNumber(node.arguments[1].arguments[0]);
+      codeGen.exitNumber(node.arguments[1].arguments[0]);
+      codeGen.exitFunction(node.arguments[1]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(EXCEL.NOW(), EXCEL.SUM(2))');
+    });
+
+    it('generates function with two mixed params: SUM(SUM(1), B4)', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              f: 'SUM(1)',
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'function',
+            name: 'SUM',
+            arguments: [{
+              type: 'number',
+              value: 1
+            }]
+          },
+          {
+            type: 'cell',
+            key: 'B4',
+            refType: 'relative'
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterFunction(node.arguments[0]);
+      codeGen.enterNumber(node.arguments[0].arguments[0]);
+      codeGen.exitNumber(node.arguments[0].arguments[0]);
+      codeGen.exitFunction(node.arguments[0]);
+      codeGen.enterCell(node.arguments[1]);
+      codeGen.exitCell(node.arguments[1]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM(EXCEL.SUM(1), $$("Sheet1!B4"))');
     });
   });
 

@@ -52,10 +52,11 @@ export function cellToFunModel(codeGen, cell) {
   visit(buildTree(tokenize(formula)), codeGen);
 
   const name = `fun${address.replace('!','$')}`;
+  const code = codeGen.jsCode();
   return {
     name,
     address,
-    definition: `function ${name}() { return ${codeGen.jsCode()}; }`,
+    definition: `function ${name}() { return ${code}; }`,
   };
 }
 
@@ -109,18 +110,31 @@ export class CodeGen {
 
   flush() {
     const flushed = this._buffer.splice(0, this._buffer.length);
-    this._nodeStack = [];
+    const nodeStack = [];
+    this._scopes[this._scopes.length - 1].nodeStack = nodeStack;
+    this._nodeStack = nodeStack;
+
     return flushed;
   }
 
   enterFunction(node) {
     console.log(`function is ${node.name}`);
     this.nodeStack.push(node);
+    if (node.arguments) {
+      node.arguments.forEach(it => it.parent = node);
+    }
 
+    let value;
     if (node.arguments.length === 0) {
-      this.buffer.push(`EXCEL.${node.name}(`);
+      value = `EXCEL.${node.name}(`;
     } else {
-      this.buffer.push(`EXCEL.${node.name}(`);
+      value = `EXCEL.${node.name}(`;
+    }
+
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
     }
   }
 
@@ -151,7 +165,7 @@ export class CodeGen {
         value = `$$("${cell.address}")`;
       }
 
-      if (this.buffer.length > 1 && this.buffer[this.buffer.length - 2].lastIndexOf("(") !== -1) {
+      if (this.nthFunctionParam(node) > 0) {
         this.buffer.push(', ' + value);
       } else {
         this.buffer.push('' + value);
@@ -159,14 +173,10 @@ export class CodeGen {
     } else {
       value = cell.value;
 
-      if (this.isNowFunctionParam()) {
-        if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
-          this.buffer.push(', ' + value);
-        } else {
-          this.buffer.push('' + value);
-        }
+      if (this.nthFunctionParam(node) > 0) {
+        this.buffer.push(', ' + value);
       } else {
-        this.buffer.push(value);
+        this.buffer.push('' + value);
       }
     }
   }
@@ -182,8 +192,8 @@ export class CodeGen {
     this.nodeStack.push(node);
 
     const {value} = node;
-    if (this.isNowFunctionParam()) {
-      if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
+    if (this.nthFunctionParam(node) !== -1) {
+      if (this.nthFunctionParam(node) > 0) {
         this.buffer.push(', ' + value);
       } else {
         this.buffer.push('' + value);
@@ -194,7 +204,7 @@ export class CodeGen {
   }
 
   exitNumber(numberNode) {
-    this.nodeStack.pop();
+    // this.nodeStack.pop();
   }
 
   enterText(node) {
@@ -238,19 +248,19 @@ export class CodeGen {
   getParentNode() {
     const len = this.nodeStack.length;
     if (len > 1) {
-      return this.nodeStack[len - 2];
+      return this.nodeStack[len - 1].parent;
     } else {
       return null;
     }
   }
 
-  isNowFunctionParam() {
+  nthFunctionParam(childNode) {
     const node = this.getParentNode();
-    if (node) {
-      return node.type === 'function';
+    if (node && node.arguments) {
+      return node.arguments.indexOf(childNode);
     }
 
-    return false;
+    return -1;
   }
   /**
    *
