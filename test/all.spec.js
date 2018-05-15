@@ -29,6 +29,11 @@ describe('One param cells', () => {
     let actual = compiled.execute('Sheet1!B7');
     expect(actual).to.be.equal(1);
   });
+
+  it('Must evaluate Sheet1!G5 = SUM(B5)', () => {
+    let actual = compiled.execute('Sheet1!G5');
+    expect(actual).to.be.equal(1);
+  });
 });
 
 describe('Two param cells', () => {

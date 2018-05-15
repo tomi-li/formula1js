@@ -94,6 +94,16 @@ describe('CodeGen', () => {
       expect(codeGen.enterNumber.length).to.be.equal(1);
     });
 
+    it('must have enterScope()', () => {
+      expect(codeGen.enterScope).to.be.a('function');
+      expect(codeGen.enterScope.length).to.be.equal(0);
+    });
+
+    it('must have exitScope()', () => {
+      expect(codeGen.exitScope).to.be.a('function');
+      expect(codeGen.exitScope.length).to.be.equal(0);
+    });
+
     it('must have jsCode()', () => {
       expect(codeGen.jsCode).to.be.a('function');
       expect(codeGen.jsCode.length).to.be.equal(0);
