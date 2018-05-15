@@ -198,6 +198,58 @@ describe('CodeGen', () => {
       expect(actual).to.equal('EXCEL.SUM(1)');
     });
 
+    it('generates function with one cell-range param', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              v: 1,
+              format: 'general',
+              dataType: 'number'
+            },
+            'B5': {
+              v: 2,
+              format: 'general',
+              dataType: 'number'
+            },
+            'B6': {
+              v: 3,
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell-range',
+            left: {
+              type: 'cell',
+              key: 'B4',
+              refType: 'relative'
+            },
+            right: {
+              type: 'cell',
+              key: 'D4',
+              refType: 'relative'
+            }
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCellRange(node.arguments[0]);
+      codeGen.exitCellRange(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM([1, 2, 3])');
+    });
+
     it('generates function with one cell param, which contains a formula', () => {
       /* TODO Optimize by immediately resolve constant params at compile time (ie, SUM(1,2,3) => 6)
          vs SUM(1, 2, A1) which cannot be reduced

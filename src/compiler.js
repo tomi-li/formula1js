@@ -185,7 +185,42 @@ export class CodeGen {
     this.nodeStack.pop();
   }
 
-  enterCellRange(node) {}
+  enterCellRange(node) {
+    let sheet = this.currentSheet;
+
+    const [sc, sr] = xlsx.split_cell(node.left.key); // start column vs start row
+    const [ec, er] = xlsx.split_cell(node.right.key); // end column vs end row
+
+    if (sc.length > 1 || ec.leading > 1) {
+      throw CodeGen.NotImplemented();
+    }
+
+    let array;
+    if (sc < ec && sr < er) { // it's a 2D array
+      array = new CellArray(ec.charCodeAt(0) - sc.charCodeAt(0), er - sr + 1);
+    } else if (sc < ec) {
+      array = new CellArray(ec.charCodeAt(0) - sc.charCodeAt(0), 1);
+    } else if (sr < er) {
+      array = new CellArray(1, er - sr + 1);
+    } else {
+      array = new CellArray(1, 1);
+    }
+
+    for (let r = sr; r<=er; r++) {
+      for (let c = sc.charCodeAt(0); r<=ec.charCodeAt(0); c++) {
+        let address = `${sheet}!${String.fromCharCode(c)}${r}`;
+        let cell = this.getCellByAddress(address);
+
+        if (cell.formula) {
+
+        } else if (cell.value) {
+
+        }
+      }
+    }
+  }
+
+  exitCellRange(node) {}
 
   enterNumber(node) {
     console.log(`number is ${node.value}`);
