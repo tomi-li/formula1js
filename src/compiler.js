@@ -82,10 +82,16 @@ export class CodeGen {
 
   constructor(workbook) {
     const _buffer = [];
-    this._scopes = [{ buffer: _buffer }];
-    this._buffer = _buffer;
+    const _nodeStack = [];
+    this._scopes = [
+      {
+        buffer: _buffer,
+        nodeStack: _nodeStack
+      }
 
-    this.nodeStack = [];
+    ];
+    this._buffer = _buffer;
+    this._nodeStack = _nodeStack;
 
     this.currentSheet = null;
     this.workbook = workbook;
@@ -97,8 +103,13 @@ export class CodeGen {
     return this._buffer;
   }
 
+  get nodeStack() {
+    return this._nodeStack;
+  }
+
   flush() {
     const flushed = this._buffer.splice(0, this._buffer.length);
+    this._nodeStack = [];
     return flushed;
   }
 
@@ -125,15 +136,23 @@ export class CodeGen {
     const address = node.key;
     const cell = this.getCellByAddress(address);
 
+    let value;
+
     if (cell.formula) {
       this.enterScope();
       const section = cellToFunModel(this, cell);
       this.dynamicSections.push(section);
       this.exitScope();
 
-      this.buffer.push(`$$("${cell.address}")`);
+      value = `$$("${cell.address}")`;
+
+      if (this.buffer.length > 1 && this.buffer[this.buffer.length - 2].lastIndexOf("(") !== -1) {
+        this.buffer.push(', ' + value);
+      } else {
+        this.buffer.push('' + value);
+      }
     } else {
-      const {value} = cell;
+      value = cell.value;
 
       if (this.isNowFunctionParam()) {
         if (this.buffer[this.buffer.length - 1].lastIndexOf("(") === -1) {
@@ -191,8 +210,13 @@ export class CodeGen {
 
   enterScope() {
     const _buffer = [];
-    this._scopes.push({ buffer: _buffer });
+    const _nodeStack = [];
+    this._scopes.push({
+      buffer: _buffer,
+      nodeStack: _nodeStack
+    });
     this._buffer = _buffer;
+    this._nodeStack = _nodeStack;
   }
 
   exitScope() {
@@ -201,7 +225,9 @@ export class CodeGen {
     }
 
     this._scopes.pop();
-    this._buffer = this._scopes[this._scopes.length - 1].buffer;
+    const scope = this._scopes[this._scopes.length - 1];
+    this._buffer = scope.buffer;
+    this._nodeStack = scope.nodeStack;
   }
 
   getParentNode() {
@@ -262,7 +288,6 @@ export class CodeGen {
     const flushed = this.flush();
     const output = flushed.join('');
 
-    this.nodeStack = [];
     return output;
   }
 

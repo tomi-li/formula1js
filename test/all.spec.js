@@ -43,12 +43,17 @@ describe('Two param cells', () => {
     let actual = compiled.execute('Sheet1!B6');
     expect(actual).to.be.equal(3);
   });
+
+  it('Must evaluate Sheet1!G6 = SUM(B5,B6)', () => {
+    let actual = compiled.execute('Sheet1!G6');
+    expect(actual).to.be.equal(4);
+  });
 });
 
 describe('Multiple param cells', () => {
   const compiled = require('./output/compiled.js');
 
-  it('Must evaluate Sheet1!B8 = SUM(B4,C4,D4)', () => {
+  it('Must evaluate Sheet1!G8 = SUM(B4,C4,D4)', () => {
     let actual = compiled.execute('Sheet1!B8');
     expect(actual).to.be.equal(6);
   });

@@ -198,7 +198,7 @@ describe('CodeGen', () => {
       expect(actual).to.equal('EXCEL.SUM(1)');
     });
 
-    it('generates function with one cell param, which is contains a formula', () => {
+    it('generates function with one cell param, which contains a formula', () => {
       /* TODO Optimize by immediately resolve constant params at compile time (ie, SUM(1,2,3) => 6)
          vs SUM(1, 2, A1) which cannot be reduced
          However, optimization should occur from bottom to top as A1 could be resolve to a constant (e.g. 3)
@@ -309,6 +309,56 @@ describe('CodeGen', () => {
 
       const actual = codeGen.jsCode();
       expect(actual).to.equal('EXCEL.SUM(1, 2)');
+    });
+
+    it('generates function with two cell params, which contain a formula', () => {
+      /* TODO Optimize by immediately resolve constant params at compile time (ie, SUM(1,2,3) => 6)
+         vs SUM(1, 2, A1) which cannot be reduced
+         However, optimization should occur from bottom to top as A1 could be resolve to a constant (e.g. 3)
+       */
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              f: 'SUM(1)',
+              format: 'general',
+              dataType: 'number'
+            },
+            'B5': {
+              f: 'SUM(1,2,3)',
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell',
+            key: 'B4',
+            refType: 'relative'
+          },
+          {
+            type: 'cell',
+            key: 'B5',
+            refType: 'relative'
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCell(node.arguments[0]);
+      codeGen.exitCell(node.arguments[0]);
+      codeGen.enterCell(node.arguments[1]);
+      codeGen.exitCell(node.arguments[1]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($$("Sheet1!B4"), $$("Sheet1!B5"))');
     });
   });
 
