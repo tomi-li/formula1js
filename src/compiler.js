@@ -75,6 +75,10 @@ export class CodeGen {
     return new Error('Invalid Entry');
   }
 
+  static CorruptionError() {
+    return new Error('Corruption Entry');
+  }
+
   static assertSheetNameFromAddress(addressString) {
     if (addressString.indexOf('!') === -1) {
       throw CodeGen.InvalidEntry();
@@ -201,6 +205,12 @@ export class CodeGen {
     }
 
     let sheet = this.currentSheet;
+    const refSheets = [node.left.key, node.right.key].map(it => (it.indexOf('!')!==-1)?it.split('!')[0]:'');
+    if ((refSheets[0] || refSheets[1]) && (refSheets[0] !== refSheets[1] || refSheets[0] !== sheet)) {
+      console.error(refSheets[0]);
+      console.error(refSheets[1]);
+      throw CodeGen.CorruptionError();
+    }
 
     const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
     const [ec, er] = splitCellAddress(node.right.key); // end column vs end row
@@ -228,8 +238,20 @@ export class CodeGen {
         let cell = this.getCellByAddress(address);
 
         if (cell.formula) {
-          throw CodeGen.NotImplemented();
-          // range.setValueAt(j, i, `$$("${address}")`);
+          let value;
+          const existing = this.dynamicSections.find(it => it.address === cell.address);
+          if (existing) {
+            value = `$$("${cell.address}")`;
+          } else {
+            this.enterScope();
+            const section = cellToFunModel(this, cell);
+            this.dynamicSections.push(section);
+            this.exitScope();
+
+            value = `$$("${cell.address}")`;
+          }
+
+          range.setValueAt(j, i, value);
         } else if (cell.value) {
           range.setValueAt(j, i, cell.value);
         }
@@ -326,17 +348,8 @@ export class CodeGen {
     this._nodeStack = scope.nodeStack;
   }
 
-  getParentNode() {
-    const len = this.nodeStack.length;
-    if (len > 1) {
-      return this.nodeStack[len - 1].parent;
-    } else {
-      return null;
-    }
-  }
-
   nthFunctionParam(childNode) {
-    const node = this.getParentNode();
+    const node = childNode.parent;
     if (node && node.arguments) {
       return node.arguments.indexOf(childNode);
     }
@@ -393,5 +406,6 @@ export class CodeGen {
 }
 
 function splitCellAddress(addressString) {
-  return addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
+  const [c,r] = addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
+  return [c, parseInt(r, 10)];
 }
