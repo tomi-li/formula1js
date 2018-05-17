@@ -30,6 +30,11 @@ describe('One param cells', () => {
     expect(actual).to.be.equal(1);
   });
 
+  it('Must evaluate Sheet1!B9 = SUM(B4:D4)', () => {
+    let actual = compiled.execute('Sheet1!B9');
+    expect(actual).to.be.equal(6);
+  });
+
   it('Must evaluate Sheet1!G5 = SUM(B5)', () => {
     let actual = compiled.execute('Sheet1!G5');
     expect(actual).to.be.equal(1);

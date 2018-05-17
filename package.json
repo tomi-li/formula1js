@@ -4,7 +4,7 @@
   "description": "Execute Excel formula in JavaScript",
   "main": "index.js",
   "scripts": {
-    "compile:dev": "babel-node src/index.js",
+    "compile:dev": "babel-node --inspect=9229 src/index.js",
     "compile:pre-test": "npm run compile:dev -- --config ./sample/mapping.json --excel ./sample/test.xlsx --output ./test/output/compiled.js",
     "compile:test": "npm run compile:pre-test && mocha --require babel-core/register test/all.spec.js",
     "build:dist": "babel src/index.js --out-file ./dist/index.js",

@@ -198,6 +198,90 @@ describe('CodeGen', () => {
       expect(actual).to.equal('EXCEL.SUM(1)');
     });
 
+    it('generates function with one cell-range param, all of which are static values', () => {
+      const mockWorkBook = {
+        Sheets: {
+          'Sheet1': {
+            'B4': {
+              v: 1,
+              format: 'general',
+              dataType: 'number'
+            },
+            'C4': {
+              v: 2,
+              format: 'general',
+              dataType: 'number'
+            },
+            'D4': {
+              v: 3,
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell-range',
+            left: {
+              type: 'cell',
+              key: 'B4',
+              refType: 'relative'
+            },
+            right: {
+              type: 'cell',
+              key: 'D4',
+              refType: 'relative'
+            }
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCellRange(node.arguments[0]);
+      codeGen.exitCellRange(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($$("Sheet1!B4:D4"))');
+      // NOTE: dynamic section definition below is a snapshot
+      expect(codeGen.dynamicSections).to.deep.equal([
+        {
+          name: 'funSheet1$B4D4',
+          address: 'Sheet1!B4:D4',
+          definition: '/**\n' +
+          ' * Evaluate data into a 1D or 2D array\n' +
+          ' *\n' +
+          ' */\n' +
+          'function funSheet1$B4D4 () {\n' +
+          '  var data = [1, 2, 3];\n' +
+          '  var colCount = 3;\n' +
+          '  var rowCount = 1;\n' +
+          '\n' +
+          '  if (colCount === 1 || rowCount === 1) {\n' +
+          '    return data;\n' +
+          '  }\n' +
+          '\n' +
+          '  let slice = new Array(rowCount);\n' +
+          '\n' +
+          '  for (let i = 0; i < rowCount; i++) {\n' +
+          '    slice[i] = new Array(colCount);\n' +
+          '\n' +
+          '    for (let j = 0; j < colCount; j++) {\n' +
+          '      slice[i][j] = data[i * colCount + j];\n' +
+          '    }\n' +
+          '  }\n' +
+          '\n' +
+          '  return slice;\n' +
+          '}\n'
+        }
+      ]);
+    });
+
     it('generates function with one cell param, which contains a formula', () => {
       /* TODO Optimize by immediately resolve constant params at compile time (ie, SUM(1,2,3) => 6)
          vs SUM(1, 2, A1) which cannot be reduced

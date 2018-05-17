@@ -6,8 +6,11 @@ import xlsx from 'xlsx';
 import {tokenize} from 'excel-formula-tokenizer';
 import {buildTree, visit} from 'excel-formula-ast';
 
+import Range from './range';
+
 const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/main.template.tpl'), 'utf8'));
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
+const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/range.template.tpl'), 'utf8'));
 
 /**
  * Compile Excel file against a given configuration to string
@@ -144,6 +147,10 @@ export class CodeGen {
   }
 
   enterCell(node) {
+    if (node.skipped) {
+      return;
+    }
+
     console.log(`cell is ${node.key}`);
     this.nodeStack.push(node);
 
@@ -185,7 +192,81 @@ export class CodeGen {
     this.nodeStack.pop();
   }
 
-  enterCellRange(node) {}
+  enterCellRange(node) {
+    if (node.left) {
+      node.left.skipped = true;
+    }
+    if (node.right) {
+      node.right.skipped = true;
+    }
+
+    let sheet = this.currentSheet;
+
+    const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
+    const [ec, er] = splitCellAddress(node.right.key); // end column vs end row
+
+    if (sc.length > 1 || ec.leading > 1) {
+      throw CodeGen.NotImplemented();
+    }
+
+    let range;
+    if (sc < ec && sr < er) { // it's a 2D array
+      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, er - sr + 1);
+    } else if (sc < ec) {
+      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, 1);
+    } else if (sr < er) {
+      range = new Range(1, er - sr + 1);
+    } else {
+      range = new Range(1, 1);
+    }
+
+    let i = 0, j = 0, colCount = range.colCount;
+    for (let r = sr; r<=er; r++) {
+      j = 0;
+      for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
+        let address = `${sheet}!${String.fromCharCode(c)}${r}`;
+        let cell = this.getCellByAddress(address);
+
+        if (cell.formula) {
+          throw CodeGen.NotImplemented();
+          // range.setValueAt(j, i, `$$("${address}")`);
+        } else if (cell.value) {
+          range.setValueAt(j, i, cell.value);
+        }
+
+        j++;
+      }
+
+      i++;
+    }
+
+    // const existing = this.dynamicSections.find(it => it.address === cell.address);
+    const name = `fun${sheet}$${node.left.key}${node.right.key}`;
+    const rangeAddress = `${sheet}!${node.left.key}:${node.right.key}`;
+    const definition = rangeTemplate({
+      name,
+      colCount: range.colCount,
+      rowCount: range.rowCount,
+      dataStringified: range.serialize()
+    });
+    const section = {
+      name,
+      definition,
+      address: rangeAddress
+    };
+    this.dynamicSections.push(section);
+
+    const value = `$$("${rangeAddress}")`;
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
+    }
+  }
+
+  exitCellRange(node) {
+    this.nodeStack.pop();
+  }
 
   enterNumber(node) {
     console.log(`number is ${node.value}`);
@@ -309,4 +390,8 @@ export class CodeGen {
   setCurrentSheet(sheetName) {
     this.currentSheet = sheetName;
   }
+}
+
+function splitCellAddress(addressString) {
+  return addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
 }
