@@ -556,4 +556,8 @@ describe('CodeGen', () => {
       codeGen.setCurrentSheet('Sheet1');
     });
   });
+
+  describe('enterBinaryExpression(node)', () => {
+    it('');
+  });
 });

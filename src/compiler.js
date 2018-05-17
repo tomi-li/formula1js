@@ -3,8 +3,8 @@ import path from 'path';
 import _ from 'lodash';
 
 import xlsx from 'xlsx';
-import {tokenize} from 'excel-formula-tokenizer';
-import {buildTree, visit} from 'excel-formula-ast';
+import { tokenize } from 'excel-formula-tokenizer';
+import { buildTree, visit } from 'excel-formula-ast';
 
 import Range from './range';
 
@@ -20,7 +20,7 @@ const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../t
  * @returns {string}
  */
 export default function (config, excelFile) {
-  const {inputs, outputs} = config;
+  const { inputs, outputs } = config;
   if (!outputs || !outputs.length) {
     throw new Error('No outputs cell specified');
   }
@@ -28,7 +28,7 @@ export default function (config, excelFile) {
     throw new Error('No Excel file specified');
   }
 
-  const workbook = xlsx.read(excelFile, {type:'file', cellFormula: true});
+  const workbook = xlsx.read(excelFile, { type: 'file', cellFormula: true });
 
   const codeGen = new CodeGen(workbook);
   const sections = _.map(outputs, (address) => {
@@ -49,12 +49,19 @@ export default function (config, excelFile) {
  * @param formula {string}
  */
 export function cellToFunModel(codeGen, cell) {
-  const {formula, address} = cell;
+  const { formula, address } = cell;
+  const definedNames = codeGen.workbook.Workbook.Names;
 
+  const resolvedFormula = _.reduce(definedNames, (sum, current) => {
+    return sum.replace(new RegExp(`\bcurrent.Name\b`), current.Ref)
+  }, formula);
+
+  console.log(`resolved formula from "${formula}" => "${resolvedFormula}"`)
   console.log(`Compiling cell[${address}] with formula ${formula}...`);
-  visit(buildTree(tokenize(formula)), codeGen);
 
-  const name = `fun${address.replace('!','$')}`;
+  visit(buildTree(tokenize(resolvedFormula)), codeGen);
+
+  const name = `fun${address.replace('!', '$')}`;
   const code = codeGen.jsCode();
   return {
     name,
@@ -80,7 +87,7 @@ export class CodeGen {
       throw CodeGen.InvalidEntry();
     }
 
-    const [sheetName, ] = addressString.split('!');
+    const [sheetName,] = addressString.split('!');
     return sheetName;
   }
 
@@ -177,6 +184,15 @@ export class CodeGen {
       } else {
         this.buffer.push('' + value);
       }
+    } else if (cell.dataType === 's') {
+      value = `"${cell.value}"`;
+
+      if (this.nthFunctionParam(node) > 0) {
+        this.buffer.push(', ' + value);
+      } else {
+        this.buffer.push('' + value);
+      }
+
     } else {
       value = cell.value;
 
@@ -221,7 +237,7 @@ export class CodeGen {
     }
 
     let i = 0, j = 0, colCount = range.colCount;
-    for (let r = sr; r<=er; r++) {
+    for (let r = sr; r <= er; r++) {
       j = 0;
       for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
         let address = `${sheet}!${String.fromCharCode(c)}${r}`;
@@ -272,7 +288,7 @@ export class CodeGen {
     console.log(`number is ${node.value}`);
     this.nodeStack.push(node);
 
-    const {value} = node;
+    const { value } = node;
     if (this.nthFunctionParam(node) !== -1) {
       if (this.nthFunctionParam(node) > 0) {
         this.buffer.push(', ' + value);
@@ -290,15 +306,39 @@ export class CodeGen {
 
   enterText(node) {
     console.log(`text is ${node.value}`);
+    const value = `"${node.value}"`;
+
     this.nodeStack.push(node);
-    this.buffer.push(node.value);
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push(value);
+    }
   }
 
-  exitText(node) {}
+  exitText(node) {
+  }
 
-  enterLogical(node) {}
+  enterLogical(node) {
+  }
 
-  enterBinaryExpression(node) {}
+  enterBinaryExpression(node) {
+    console.log(`bin exp is ${node.operator}`);
+    this.nodeStack.push(node);
+    [node.left, node.right].forEach(it => it.parent = node);
+
+    // FIXME need to support more operators
+    const value = `EQ(`;
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
+    }
+  }
+
+  exitBinaryExpression(node) {
+    this.buffer.push(')');
+  }
 
   enterUnaryExpression(unaryNode) {
 
@@ -337,8 +377,16 @@ export class CodeGen {
 
   nthFunctionParam(childNode) {
     const node = this.getParentNode();
-    if (node && node.arguments) {
-      return node.arguments.indexOf(childNode);
+    if (!node) {
+      return -1;
+    }
+
+    if (node.type === 'function') {
+      if (node && node.arguments) {
+        return node.arguments.indexOf(childNode);
+      }
+    } else if (node.type === 'binary-expression') {
+      return node.left === childNode ? 0 : node.right === childNode ? 1 : -1;
     }
 
     return -1;
@@ -352,7 +400,6 @@ export class CodeGen {
    */
   getCellByAddress(addressString) {
     let sheet, addr;
-    addressString = this.findRef(addressString);
     addressString = this.safelyRemove$(addressString);
 
     if (addressString.indexOf('!') !== -1) {
@@ -410,5 +457,5 @@ export class CodeGen {
 }
 
 function splitCellAddress(addressString) {
-  return addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
+  return addressString.replace(/(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
 }
