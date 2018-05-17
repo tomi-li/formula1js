@@ -208,9 +208,9 @@ export class CodeGen {
   }
 
   enterText(node) {
-    console.log(`text is ${numberNode.value}`);
+    console.log(`text is ${node.value}`);
     this.nodeStack.push(node);
-    this.buffer.push(numberNode.value);
+    this.buffer.push(node.value);
   }
 
   exitText(node) {}
@@ -262,6 +262,7 @@ export class CodeGen {
 
     return -1;
   }
+
   /**
    *
    * @param workbook {WorkBook}
@@ -270,6 +271,9 @@ export class CodeGen {
    */
   getCellByAddress(addressString) {
     let sheet, addr;
+    addressString = this.findRef(addressString);
+    addressString = this.safelyRemove$(addressString);
+
     if (addressString.indexOf('!') !== -1) {
       [sheet, addr] = addressString.split('!');
 
@@ -278,7 +282,8 @@ export class CodeGen {
       addr = addressString;
     }
 
-    console.log(`Accessing sheet ${sheet} cell ${addr}...`)
+    console.log(`Accessing sheet ${sheet} cell ${addr}...`);
+
     const cell = this.workbook.Sheets[sheet][addr];
     return {
       address: `${sheet}!${addr}`,
@@ -287,6 +292,18 @@ export class CodeGen {
       value: cell.v,
       dataType: cell.t
     }
+  }
+
+  findRef(name) {
+    const nameList = this.workbook.Workbook.Names;
+    const result = _.find(nameList, { Name: name });
+    return _.isNil(result)
+      ? name
+      : result.Ref
+  }
+
+  safelyRemove$(address) {
+    return _.replace(address, /\$/g, '');
   }
 
   /**
