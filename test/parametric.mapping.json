@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "input1": "Sheet2!B2",
+    "input2": "Sheet2!B3",
+    "input3": "Sheet2!B4"
+  },
+  "outputs": [
+    "Sheet2!B13",
+    "Sheet2!B14"
+  ]
+}

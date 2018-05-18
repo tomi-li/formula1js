@@ -35,7 +35,7 @@ export default function (config, excelFile) {
 
   const workbook = xlsx.read(excelFile, { type: 'file', cellFormula: true });
 
-  const codeGen = new CodeGen(workbook);
+  const codeGen = new CodeGen(workbook, _.values(inputs));
   const sections = _.map(outputs, (address) => {
     codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
@@ -100,7 +100,16 @@ export class CodeGen {
     return sheetName;
   }
 
-  constructor(workbook) {
+  /**
+   *
+   * @param workbook {XLSX.Workbook} The Excel workbook to transform
+   * @param inputs {Array<string>} Optional addresses for runtime value inputs
+   */
+  constructor(workbook, inputs) {
+    if (!workbook) {
+      throw new Error('Invalid argument');
+    }
+
     const _buffer = [];
     const _nodeStack = [];
     this._scopes = [
@@ -117,6 +126,10 @@ export class CodeGen {
     this.workbook = workbook;
 
     this.dynamicSections = [];
+    this.inputs = (inputs || []).reduce((acc, item) => {
+      acc[item] = undefined;
+      return acc;
+    }, {});
   }
 
   get buffer() {
@@ -175,7 +188,9 @@ export class CodeGen {
 
     let value;
 
-    if (cell.formula) {
+    if (this.isAnInputAddress(cell.address)) {
+      value = `$["${cell.address}"]`;
+    } else if (cell.formula) {
       const existing = this.dynamicSections.find(it => it.address === cell.address);
       if (existing) {
         value = `$$("${cell.address}")`;
@@ -201,15 +216,14 @@ export class CodeGen {
       } else {
         this.buffer.push('' + value);
       }
-
     } else {
       value = cell.value;
+    }
 
-      if (this.nthFunctionParam(node) > 0) {
-        this.buffer.push(', ' + value);
-      } else {
-        this.buffer.push('' + value);
-      }
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
     }
   }
 
@@ -258,8 +272,10 @@ export class CodeGen {
         let address = `${sheet}!${String.fromCharCode(c)}${r}`;
         let cell = this.getCellByAddress(address);
 
-        if (cell.formula) {
-          let value;
+        let value;
+        if (this.isAnInputAddress(cell.address)) {
+          value = `$["${cell.address}"]`;
+        } if (cell.formula) {
           const existing = this.dynamicSections.find(it => it.address === cell.address);
           if (existing) {
             value = `$$("${cell.address}")`;
@@ -273,9 +289,10 @@ export class CodeGen {
           }
 
           range.setValueAt(j, i, value);
-        } else if (cell.value) {
-          range.setValueAt(j, i, cell.value);
+        } else if (typeof cell.value !== 'undefined') {
+          value = cell.value;
         }
+        range.setValueAt(j, i, value);
 
         j++;
       }
@@ -455,6 +472,9 @@ export class CodeGen {
     return _.replace(address, /\$/g, '');
   }
 
+  isAnInputAddress(address) {
+    return address && address in this.inputs;
+  }
   /**
    * Return a JS code model
    * - type: VARIABLE | FUNCTION

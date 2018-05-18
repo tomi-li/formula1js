@@ -72,6 +72,7 @@ function $$(cell) {
  * @param params {Map<string,*>} Variadic parameters to update $
  */
 exports.execute = function(address) {
+  $ = {};
   var params = arguments.length === 2 ? arguments[1]: null;
   if (params) {
     Object.keys(params).forEach(function(key) {
@@ -83,5 +84,6 @@ exports.execute = function(address) {
     <% _.forEach(publicSections, function (section) { %>
     case "<%= section.address %>": return (<%= section.definition %>)();
     <% }) %>
+    default: throw new Error('Address not executable');
   }
 };
