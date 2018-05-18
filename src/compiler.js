@@ -26,8 +26,9 @@ function safelyRemove$(address) {
  * @returns {string}
  */
 export default function (config, excelFile) {
-  const { inputs, outputs } = config;
-  if (!outputs || !outputs.length) {
+  const {inputs, outputs} = config;
+  const outputAddresses = extractOutputs(outputs);
+  if (!outputAddresses || !outputAddresses.length) {
     throw new Error('No outputs cell specified');
   }
   if (!excelFile) {
@@ -37,7 +38,7 @@ export default function (config, excelFile) {
   const workbook = xlsx.read(excelFile, { type: 'file', cellFormula: true });
 
   const codeGen = new CodeGen(workbook, _.values(inputs));
-  const sections = _.map(outputs, (address) => {
+  const sections = _.map(outputAddresses, (address) => {
     codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
     const cell = codeGen.getCellByAddress(address);
@@ -45,6 +46,9 @@ export default function (config, excelFile) {
   });
 
   return mainTemplate({
+    inputMappings: inputs,
+    outputMappings: JSON.stringify(outputs),
+    outputAddresses,
     publicSections: sections,
     dynamicDataSections: codeGen.dynamicSections
   });
@@ -76,6 +80,30 @@ export function cellToFunModel(codeGen, cell) {
   };
 }
 
+export function extractOutputs(outputMappings) {
+  const outputs = [];
+
+  extract(outputMappings);
+
+  return outputs;
+
+  function extract (entry) {
+    _.values(entry).forEach((maybeRef) => {
+      if (typeof maybeRef === 'object') {
+        if ('cell' in maybeRef) {
+          if (!maybeRef.cell) {
+            throw new Error('Invalid mapping config');
+          }
+          outputs.push(maybeRef.cell);
+        } else {
+          extract(maybeRef);
+        }
+      } else if (maybeRef instanceof Array) {
+        extract(maybeRef);
+      }
+    });
+  }
+}
 /**
  * JS CodeGenerator
  */

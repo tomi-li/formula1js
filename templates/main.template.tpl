@@ -5,6 +5,34 @@ Object.keys(formulajs).forEach(function(key) {
   EXCEL[key] = formulajs[key]
 });
 
+function inflate(evaluations, outputs) {
+  if (typeof outputs === 'object') {
+    Object.keys(outputs).forEach(function(key) {
+      visit(outputs, key);
+    });
+  }
+
+  return outputs;
+
+  function visit(obj, prop) {
+    if (typeof obj[prop] === 'object') {
+      if ('cell' in obj[prop]) {
+        var address = obj[prop].cell;
+        setValue(obj, prop, evaluations[address]);
+      } else {
+        Object.keys(obj[prop]).forEach(function (key) {
+          visit(obj[key], key);
+        })
+      }
+    }
+  }
+
+
+  function setValue(obj, prop, value) {
+    obj[prop] = value;
+  }
+}
+
 function EQ(arg1, arg2) {
   return arg1 === arg2;
 }
@@ -103,7 +131,7 @@ function $$(cell) {
  * @param address {string} Fully qualified cell address (eg. Sheet1!A1)
  * @param params {Map<string,*>} Variadic parameters to update $
  */
-exports.execute = function(address) {
+function execute(address) {
   $ = {};
   var params = arguments.length === 2 ? arguments[1]: null;
   if (params) {
@@ -118,4 +146,23 @@ exports.execute = function(address) {
     <% }) %>
     default: throw new Error('Address not executable');
   }
+}
+exports.execute = execute;
+
+/**
+ * @param inputs {Map<string, anything>}
+ * For example: { input1: 10 }
+ */
+exports.executeFormulas = function(inputs) {
+  var assignedInputs = {};
+  var evaluations = {};
+  <% _.forEach(inputMappings, function (varAddress, varName) { %>
+  assignedInputs["<%= varAddress %>"] = inputs["<%= varName %>"];<% }) %>
+
+  var outputs = <%= outputMappings %>;
+  <% _.forEach(outputAddresses, function (varAddress) { %>
+  evaluations["<%= varAddress %>"] = execute("<%= varAddress %>", assignedInputs);<% }) %>
+
+  inflate(evaluations, outputs);
+  return outputs;
 };

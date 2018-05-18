@@ -50,3 +50,13 @@ describe('Multiple param cells', () => {
 
   });
 });
+
+describe('Execute formulas', () => {
+  const parametric = require('./output/parametric.js');
+
+  it('Must evaluate executeFormulas()', () => {
+    expect(parametric.executeFormulas({ input1: 0, input2: 0 })).to.deep.equal([0, 0]);
+    expect(parametric.executeFormulas({ input1: 1, input2: 2 })).to.deep.equal([1, 3]);
+    expect(parametric.executeFormulas({ input1: 2, input2: 4 })).to.deep.equal([2, 6]);
+  });
+});

@@ -5,7 +5,7 @@
     "input3": "Sheet2!B4"
   },
   "outputs": [
-    "Sheet2!B13",
-    "Sheet2!B14"
+    {"cell": "Sheet2!B13"},
+    {"cell": "Sheet2!B14"}
   ]
 }
