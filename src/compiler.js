@@ -7,6 +7,7 @@ import { tokenize } from 'excel-formula-tokenizer';
 import { buildTree, visit } from 'excel-formula-ast';
 
 import Range from './range';
+import { getFunctionByOperator } from './banaryOperators';
 
 const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/main.template.tpl'), 'utf8'));
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
@@ -358,9 +359,9 @@ export class CodeGen {
     console.log(`bin exp is ${node.operator}`);
     this.nodeStack.push(node);
     [node.left, node.right].forEach(it => it.parent = node);
+    const jsOperatorFunction = getFunctionByOperator(node.operator);
 
-    // FIXME need to support more operators
-    const value = `EQ(`;
+    const value = `${jsOperatorFunction}(`;
     if (this.nthFunctionParam(node) > 0) {
       this.buffer.push(', ' + value);
     } else {
