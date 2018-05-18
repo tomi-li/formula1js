@@ -202,20 +202,8 @@ export class CodeGen {
 
         value = `$$("${cell.address}")`;
       }
-
-      if (this.nthFunctionParam(node) > 0) {
-        this.buffer.push(', ' + value);
-      } else {
-        this.buffer.push('' + value);
-      }
     } else if (cell.dataType === 's') {
       value = `"${cell.value}"`;
-
-      if (this.nthFunctionParam(node) > 0) {
-        this.buffer.push(', ' + value);
-      } else {
-        this.buffer.push('' + value);
-      }
     } else {
       value = cell.value;
     }
