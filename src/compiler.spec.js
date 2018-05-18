@@ -52,7 +52,18 @@ describe('formulaToCode', () => {
 
 describe('CodeGen', () => {
   describe('Public interface', () => {
-    let codeGen = new CodeGen();
+    let codeGen;
+    beforeEach(() => {
+      const mockWorkbook = {};
+      codeGen = new CodeGen(mockWorkbook);
+    });
+
+    it('must have a constructor', () => {
+      expect(CodeGen).to.be.a('function');
+      expect(CodeGen.length).to.be.equal(2);
+
+      expect(() => new CodeGen()).to.throw();
+    });
 
     it('must have enterFunction(node)', () => {
       expect(codeGen.enterFunction).to.be.a('function');
@@ -125,10 +136,11 @@ describe('CodeGen', () => {
     });
   });
 
-  describe('Function node transformation', () => {
+  describe('Parameterless CodeGen transformation', () => {
     let codeGen;
     beforeEach(() => {
-      codeGen = new CodeGen();
+      const mockWorkbook = {};
+      codeGen = new CodeGen(mockWorkbook);
       codeGen.setCurrentSheet('Sheet1');
     });
 
@@ -166,6 +178,7 @@ describe('CodeGen', () => {
 
     it('generates function with one cell param, which is a constant', () => {
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -200,6 +213,7 @@ describe('CodeGen', () => {
 
     it('generates function with one cell-range param, all of which are static values', () => {
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -288,6 +302,7 @@ describe('CodeGen', () => {
          However, optimization should occur from bottom to top as A1 could be resolve to a constant (e.g. 3)
        */
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -376,6 +391,7 @@ describe('CodeGen', () => {
 
     it('generates function with two cell reference params, which are constants themselves', () => {
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -426,6 +442,7 @@ describe('CodeGen', () => {
          However, optimization should occur from bottom to top as A1 could be resolve to a constant (e.g. 3)
        */
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -504,6 +521,7 @@ describe('CodeGen', () => {
 
     it('generates function with two mixed params: SUM(SUM(1), B4)', () => {
       const mockWorkBook = {
+        Workbook: { Names: [] },
         Sheets: {
           'Sheet1': {
             'B4': {
@@ -546,6 +564,115 @@ describe('CodeGen', () => {
 
       const actual = codeGen.jsCode();
       expect(actual).to.equal('EXCEL.SUM(EXCEL.SUM(1), $$("Sheet1!B4"))');
+    });
+  });
+
+  describe('Parameterized CodeGen transformation', () => {
+    let codeGen;
+    beforeEach(() => {
+      const mockWorkbook = {
+        Workbook: { Names: [] },
+        Sheets: {
+          Sheet2: {
+            B2: {
+              v: 1,
+              format: 'general',
+              dataType: 'number'
+            },
+            B3: {
+              v: 2,
+              format: 'general',
+              dataType: 'number'
+            },
+            B4: {
+              v: 3,
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkbook, ['Sheet2!B2', 'Sheet2!B3']);
+      codeGen.setCurrentSheet('Sheet2');
+    });
+
+    it('generates function with one cell param', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [{
+          type: 'cell',
+          key: 'B2',
+          refType: 'relative'
+        }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCell(node.arguments[0]);
+      codeGen.exitCell(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($["Sheet2!B2"])');
+    });
+
+    it('generates function with one cell-range param', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell-range',
+            left: {
+              type: 'cell',
+              key: 'B2',
+              refType: 'relative'
+            },
+            right: {
+              type: 'cell',
+              key: 'B4',
+              refType: 'relative'
+            }
+          }
+        ]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCellRange(node.arguments[0]);
+      codeGen.exitCellRange(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($$("Sheet2!B2:B4"))');
+      expect(codeGen.dynamicSections).to.deep.equal([
+        {
+          name: 'funSheet2$B2B4',
+          address: 'Sheet2!B2:B4',
+          definition: '/**\n' +
+          ' * Evaluate data into a 1D or 2D array\n' +
+          ' *\n' +
+          ' */\n' +
+          'function funSheet2$B2B4 () {\n' +
+          '  var data = [["Sheet2!B2"], ["Sheet2!B3"], 3];\n' +
+          '  var colCount = 1;\n' +
+          '  var rowCount = 3;\n' +
+          '\n' +
+          '  if (colCount === 1 || rowCount === 1) {\n' +
+          '    return data;\n' +
+          '  }\n' +
+          '\n' +
+          '  let slice = new Array(rowCount);\n' +
+          '\n' +
+          '  for (let i = 0; i < rowCount; i++) {\n' +
+          '    slice[i] = new Array(colCount);\n' +
+          '\n' +
+          '    for (let j = 0; j < colCount; j++) {\n' +
+          '      slice[i][j] = data[i * colCount + j];\n' +
+          '    }\n' +
+          '  }\n' +
+          '\n' +
+          '  return slice;\n' +
+          '}\n'
+        }
+      ]);
     });
   });
 
