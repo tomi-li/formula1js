@@ -30,6 +30,11 @@ describe('One param cells', () => {
     expect(actual).to.be.equal(1);
   });
 
+  it('Must evaluate Sheet1!B9 = SUM(B4:D4)', () => {
+    let actual = compiled.execute('Sheet1!B9');
+    expect(actual).to.be.equal(6);
+  });
+
   it('Must evaluate Sheet1!G5 = SUM(B5)', () => {
     let actual = compiled.execute('Sheet1!G5');
     expect(actual).to.be.equal(1);
@@ -59,6 +64,11 @@ describe('Two param cells', () => {
     expect(actual).to.be.equal(4);
   });
 
+  it('Must evaluate Sheet1!G9 = SUM(B5:B8)', () => {
+    let actual = compiled.execute('Sheet1!G9');
+    expect(actual).to.be.equal(11);
+  });
+
   it('Must evaluate Sheet1!B15 = SUM(SUM(1), SUM(2))', () =>  {
     let actual = compiled.execute('Sheet1!B15');
     expect(actual).to.be.equal(3);
@@ -72,6 +82,11 @@ describe('Two param cells', () => {
   it('Must evaluate Sheet1!B18 = SUM(SUM(1), B5)', () =>  {
     let actual = compiled.execute('Sheet1!B18');
     expect(actual).to.be.equal(2);
+  });
+
+  it('Must evaluate Sheet1!G10 = SUM(B8,B9:B10)', () => {
+    let actual = compiled.execute('Sheet1!G10');
+    expect(actual).to.be.equal(18);
   });
 });
 
