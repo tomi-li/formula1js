@@ -5,21 +5,21 @@
     "input3": "Sheet1!B4"
   },
   "outputs": [
-    "Sheet1!B2",
-    "Sheet1!B5",
-    "Sheet1!B6",
-    "Sheet1!B7",
-    "Sheet1!B8",
-    "Sheet1!B9",
-    "Sheet1!G5",
-    "Sheet1!G6",
-    "Sheet1!G8",
-    "Sheet1!G9",
-    "Sheet1!G10",
-    "Sheet1!B14",
-    "Sheet1!B15",
-    "Sheet1!B16",
-    "Sheet1!B17",
-    "Sheet1!B18"
+    {"cell":"Sheet1!B2"},
+    {"cell":"Sheet1!B5"},
+    {"cell":"Sheet1!B6"},
+    {"cell":"Sheet1!B7"},
+    {"cell":"Sheet1!B8"},
+    {"cell":"Sheet1!B9"},
+    {"cell":"Sheet1!G5"},
+    {"cell":"Sheet1!G6"},
+    {"cell":"Sheet1!G8"},
+    {"cell":"Sheet1!G9"},
+    {"cell":"Sheet1!G10"},
+    {"cell":"Sheet1!B14"},
+    {"cell":"Sheet1!B15"},
+    {"cell":"Sheet1!B16"},
+    {"cell":"Sheet1!B17"},
+    {"cell":"Sheet1!B18"}
   ]
 }
