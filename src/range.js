@@ -1,4 +1,5 @@
 /* global: $, $$ */
+import _ from 'lodash';
 
 export default class Range {
   constructor(colCount, rowCount) {
@@ -13,15 +14,25 @@ export default class Range {
   }
 
   serialize() {
-    const dataStringified = this.data.map((it) => {
-      if (typeof it === 'function') {
-        return it.name;
-      } else if (typeof it === 'undefined') {
-        return null;
-      } else {
-        return '' + it;
-      }
-    }).join(', ');
+    const dataStringified = _.chain(this.data)
+      .map((it) => {
+        if (typeof it === 'function') {
+          return it.name;
+        } else if (typeof it === 'undefined') {
+          return null;
+        } else if (_.startsWith(it, '$$')) {
+          return '' + it
+        } else if (_.isString(it)) {
+          if (_.includes(it, '\n')) {
+            return `"${it.replace(/(\r\n|\n|\r)/gm, '')}"`
+          }
+          return `"${it}"`;
+        } else {
+          return '' + it;
+        }
+      })
+      .compact()
+      .join(', ');
 
     return `[${dataStringified}]`;
   }

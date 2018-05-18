@@ -5,6 +5,10 @@ Object.keys(formulajs).forEach(function(key) {
   EXCEL[key] = formulajs[key]
 });
 
+function EQ(arg1, arg2) {
+  return arg1 === arg2;
+}
+
 // Static Data section
 /**
  * Upon calls to `execute`, $ is updated accordingly.
