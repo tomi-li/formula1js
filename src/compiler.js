@@ -12,6 +12,11 @@ const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../te
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
 const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/range.template.tpl'), 'utf8'));
 
+
+function safelyRemove$(addressString) {
+  return this.safelyRemove$(addressString);
+}
+
 /**
  * Compile Excel file against a given configuration to string
  *
@@ -221,7 +226,7 @@ export class CodeGen {
     }
 
     let sheet = this.currentSheet;
-    const refSheets = [node.left.key, node.right.key].map(it => (it.indexOf('!')!==-1)?it.split('!')[0]:'');
+    const refSheets = [node.left.key, node.right.key].map(it => (it.indexOf('!') !== -1) ? it.split('!')[0] : '');
     if ((refSheets[0] || refSheets[1]) && (refSheets[0] !== refSheets[1] || refSheets[0] !== sheet)) {
       console.error(refSheets[0]);
       console.error(refSheets[1]);
@@ -389,7 +394,7 @@ export class CodeGen {
   }
 
   nthFunctionParam(childNode) {
-    const node = this.getParentNode();
+    const node = childNode.parent;
     if (!node) {
       return -1;
     }
@@ -413,7 +418,7 @@ export class CodeGen {
    */
   getCellByAddress(addressString) {
     let sheet, addr;
-    addressString = this.safelyRemove$(addressString);
+    addressString = safelyRemove$(addressString);
 
     if (addressString.indexOf('!') !== -1) {
       [sheet, addr] = addressString.split('!');
@@ -426,6 +431,9 @@ export class CodeGen {
     console.log(`Accessing sheet ${sheet} cell ${addr}...`);
 
     const cell = this.workbook.Sheets[sheet][addr];
+    if (cell === undefined) {
+      return {};
+    }
     return {
       address: `${sheet}!${addr}`,
       formula: cell.f,
@@ -470,6 +478,7 @@ export class CodeGen {
 }
 
 function splitCellAddress(addressString) {
-  const [c,r] = addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
+  const resolvedAddress = safelyRemove$((addressString));
+  const [c, r] = resolvedAddress.replace(/(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
   return [c, parseInt(r, 10)];
 }
