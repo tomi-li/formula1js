@@ -37,7 +37,7 @@ export default function (config, excelFile) {
 
   const workbook = xlsx.read(excelFile, { type: 'file', cellFormula: true });
 
-  const codeGen = new CodeGen(workbook, _.values(inputs));
+  const codeGen = new CodeGen(workbook, _.values(inputs).map(it => it.cell?it.cell:it));
   const sections = _.map(outputAddresses, (address) => {
     codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
@@ -47,7 +47,7 @@ export default function (config, excelFile) {
 
   return mainTemplate({
     inputMappings: inputs,
-    outputMappings: JSON.stringify(outputs),
+    outputMappings: JSON.stringify(outputs, null, 2),
     outputAddresses,
     publicSections: sections,
     dynamicDataSections: codeGen.dynamicSections
@@ -59,20 +59,28 @@ export default function (config, excelFile) {
  * @param formula {string}
  */
 export function cellToFunModel(codeGen, cell) {
-  const { formula, address } = cell;
+  const {formula, address, serialize} = cell;
   const definedNames = codeGen.workbook.Workbook.Names;
+  let code;
 
-  const resolvedFormula = _.reduce(definedNames, (sum, current) => {
-    return sum.replace(new RegExp(`\bcurrent.Name\b`), current.Ref)
-  }, formula);
+  if (codeGen.isAnInputAddress(address)) {
+    code = `$["${address}"]`;
+  } else if (formula) {
+    const resolvedFormula = _.reduce(definedNames, (sum, current) => {
+      return sum.replace(new RegExp(`\bcurrent.Name\b`), current.Ref)
+    }, formula);
 
-  console.log(`resolved formula from "${formula}" => "${resolvedFormula}"`)
-  console.log(`Compiling cell[${address}] with formula ${formula}...`);
+    console.log(`resolved formula from "${formula}" => "${resolvedFormula}"`)
+    console.log(`Compiling cell[${address}] with formula ${formula}...`);
 
-  visit(buildTree(tokenize(resolvedFormula)), codeGen);
+    visit(buildTree(tokenize(resolvedFormula)), codeGen);
+    code = codeGen.jsCode();
+  } else {
+    code = `${serialize()}`;
+  }
 
   const name = `fun${address.replace('!', '$')}`;
-  const code = codeGen.jsCode();
+
   return {
     name,
     address,
@@ -260,11 +268,9 @@ export class CodeGen {
     }
 
     let sheet = this.currentSheet;
-    const refSheets = [node.left.key, node.right.key].map(it => (it.indexOf('!') !== -1) ? it.split('!')[0] : '');
-    if ((refSheets[0] || refSheets[1]) && (refSheets[0] !== refSheets[1] || refSheets[0] !== sheet)) {
-      console.error(refSheets[0]);
-      console.error(refSheets[1]);
-      throw CodeGen.CorruptionError();
+    const [refSheet,] = node.left.key.indexOf('!') !== -1 ? node.left.key.split('!'): [sheet];
+    if (sheet !== refSheet) {
+      this.setCurrentSheet(refSheet);
     }
 
     const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
@@ -289,7 +295,7 @@ export class CodeGen {
     for (let r = sr; r <= er; r++) {
       j = 0;
       for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
-        let address = `${sheet}!${String.fromCharCode(c)}${r}`;
+        let address = `${refSheet}!${String.fromCharCode(c)}${r}`;
         let cell = this.getCellByAddress(address);
 
         let value;
@@ -321,20 +327,22 @@ export class CodeGen {
     }
 
     // const existing = this.dynamicSections.find(it => it.address === cell.address);
-    const name = `fun${sheet}$${node.left.key}${node.right.key}`;
-    const rangeAddress = `${sheet}!${node.left.key}:${node.right.key}`;
-    const definition = rangeTemplate({
-      name,
-      colCount: range.colCount,
-      rowCount: range.rowCount,
-      dataStringified: range.serialize()
-    });
-    const section = {
-      name,
-      definition,
-      address: rangeAddress
-    };
-    this.dynamicSections.push(section);
+    const rangeAddress = `${refSheet}!${sc}${sr}:${ec}${er}`;
+    if (!this.dynamicSections.find(it => it.address === rangeAddress)) {
+      const name = `fun${refSheet}$${sc}${sr}${ec}${er}`;
+      const definition = rangeTemplate({
+        name,
+        colCount: range.colCount,
+        rowCount: range.rowCount,
+        dataStringified: range.serialize()
+      });
+      const section = {
+        name,
+        definition,
+        address: rangeAddress
+      };
+      this.dynamicSections.push(section);
+    }
 
     const value = `$$("${rangeAddress}")`;
     if (this.nthFunctionParam(node) > 0) {
@@ -476,7 +484,13 @@ export class CodeGen {
       formula: cell.f,
       format: cell.F,
       value: cell.v,
-      dataType: cell.t
+      dataType: cell.t,
+      serialize() {
+        switch (cell.t) {
+          case 's': return `"${cell.v}"`;
+          default: return `${cell.v}`;
+        }
+      }
     }
   }
 
@@ -514,7 +528,7 @@ export class CodeGen {
 }
 
 function splitCellAddress(addressString) {
-  const resolvedAddress = safelyRemove$((addressString));
-  const [c, r] = resolvedAddress.replace(/(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
+  const resolvedAddress = safelyRemove$(addressString);
+  const [c, r] = resolvedAddress.replace(/(?:\w+!)?(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
   return [c, parseInt(r, 10)];
 }

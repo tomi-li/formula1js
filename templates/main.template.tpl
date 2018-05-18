@@ -157,7 +157,7 @@ exports.executeFormulas = function(inputs) {
   var assignedInputs = {};
   var evaluations = {};
   <% _.forEach(inputMappings, function (varAddress, varName) { %>
-  assignedInputs["<%= varAddress %>"] = inputs["<%= varName %>"];<% }) %>
+  assignedInputs["<%= varAddress.cell || varAddress %>"] = inputs["<%= varName %>"];<% }) %>
 
   var outputs = <%= outputMappings %>;
   <% _.forEach(outputAddresses, function (varAddress) { %>
