@@ -9,6 +9,38 @@ function EQ(arg1, arg2) {
   return arg1 === arg2;
 }
 
+function ADD(arg1, arg2) {
+  return arg1 + arg2;
+}
+
+function LESS_THAN(arg1, arg2){
+  return arg1 < arg2;
+}
+
+function EQUAL_LESS_THAN(arg1, arg2){
+  return arg1 <= arg2;
+}
+
+function GREATER_THAN(arg1, arg2){
+  return arg1 > arg2
+}
+
+function EQUAL_GREATER_THAN(arg1, arg2){
+  return arg1 >= arg2;
+}
+
+function MINUS(arg1, arg2){
+  return arg1 - arg2;
+}
+
+function DIVIDE(arg1, arg2){
+  return arg1 / arg2;
+}
+
+function MULTIPLY(arg1, arg2){
+  return arg1 * arg2;
+}
+
 // Static Data section
 /**
  * Upon calls to `execute`, $ is updated accordingly.
