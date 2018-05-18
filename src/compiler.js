@@ -26,7 +26,7 @@ function safelyRemove$(address) {
  * @returns {string}
  */
 export default function (config, excelFile) {
-  const {inputs, outputs} = config;
+  const {input: inputs, output: outputs} = config;
   const outputAddresses = extractOutputs(outputs);
   if (!outputAddresses || !outputAddresses.length) {
     throw new Error('No outputs cell specified');
@@ -94,7 +94,10 @@ export function extractOutputs(outputMappings) {
           if (!maybeRef.cell) {
             throw new Error('Invalid mapping config');
           }
-          outputs.push(maybeRef.cell);
+
+          if (outputs.indexOf(maybeRef.cell) === -1) {
+            outputs.push(maybeRef.cell);
+          }
         } else {
           extract(maybeRef);
         }

@@ -1,6 +1,6 @@
 {
-  "inputs": {},
-  "outputs": [
+  "input": {},
+  "output": [
     {"cell":"Sheet1!B2"},
     {"cell":"Sheet1!B5"},
     {"cell":"Sheet1!B6"},

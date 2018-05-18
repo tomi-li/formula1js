@@ -1,10 +1,10 @@
 {
-  "inputs": {
+  "input": {
     "input1": "Sheet1!B2",
     "input2": "Sheet1!B3",
     "input3": "Sheet1!B4"
   },
-  "outputs": [
+  "output": [
     {"cell":"Sheet1!B2"},
     {"cell":"Sheet1!B5"},
     {"cell":"Sheet1!B6"},
