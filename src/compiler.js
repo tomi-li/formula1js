@@ -13,8 +13,8 @@ const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/.
 const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/range.template.tpl'), 'utf8'));
 
 
-function safelyRemove$(addressString) {
-  return this.safelyRemove$(addressString);
+function safelyRemove$(address) {
+  return _.replace(address, /\$/g, '');
 }
 
 /**
@@ -466,10 +466,6 @@ export class CodeGen {
     return _.isNil(result)
       ? name
       : result.Ref
-  }
-
-  safelyRemove$(address) {
-    return _.replace(address, /\$/g, '');
   }
 
   isAnInputAddress(address) {
