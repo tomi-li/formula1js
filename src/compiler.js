@@ -7,7 +7,7 @@ import { tokenize } from 'excel-formula-tokenizer';
 import { buildTree, visit } from 'excel-formula-ast';
 
 import Range from './range';
-import { getFunctionByOperator } from './banaryOperators';
+import { getFunctionByOperator } from './binaryOperators';
 
 const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/main.template.tpl'), 'utf8'));
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
