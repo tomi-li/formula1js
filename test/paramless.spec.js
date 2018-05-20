@@ -117,6 +117,55 @@ describe('Three param cells', () => {
   });
 });
 
+describe('Four param cells', () => {
+  const paramless = require('./output/paramless.js');
+
+  it('Must evaluate Sheet1!B33 = VLOOKUP(0,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B33');
+    expect(actual).to.be.null;
+  });
+
+  it('Must evaluate Sheet1!B34 = VLOOKUP(1,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B34');
+    expect(actual).to.be.equal(3);
+  });
+
+  it('Must evaluate Sheet1!B35 = VLOOKUP(2,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B35');
+    expect(actual).to.be.null;
+  });
+
+  it('Must evaluate Sheet1!B36 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B36');
+    expect(actual).to.be.equal(30);
+  });
+
+  it('Must evaluate Sheet1!B37 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B37');
+    expect(actual).to.be.null;
+  });
+
+  it('Must evaluate Sheet1!B38 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B38');
+    expect(actual).to.be.equal(3);
+  });
+
+  it('Must evaluate Sheet1!B39 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B39');
+    expect(actual).to.be.equal(3);
+  });
+
+  it('Must evaluate Sheet1!B40 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B40');
+    expect(actual).to.be.equal(30);
+  });
+
+  it('Must evaluate Sheet1!B41 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
+    let actual = paramless.execute('Sheet1!B41');
+    expect(actual).to.be.equal(300);
+  });
+});
+
 describe('Multiple param cells', () => {
   const paramless = require('./output/paramless.js');
 
