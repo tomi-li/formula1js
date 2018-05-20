@@ -65,3 +65,4 @@ dist/*.js
 **/output/**/*.js
 .DS_Store
 ~$*.xlsx
+compiled.js
