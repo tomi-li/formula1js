@@ -5,6 +5,11 @@ Object.keys(formulajs).forEach(function(key) {
   EXCEL[key] = formulajs[key]
 });
 
+// Custom EXCEL function definitions
+<% _.forEach(extendedFunctions, function (fn) { %>
+EXCEL.<%= fn.name %> = <%= fn.definition %>; <% }) %>
+// END of Custom EXCEL function definitions
+
 function inflate(evaluations, outputs) {
   if (typeof outputs === 'object') {
     Object.keys(outputs).forEach(function(key) {
