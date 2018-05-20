@@ -1,6 +1,8 @@
 import { expect } from 'chai';
 import { default as compiler, cellToFunModel, CodeGen } from './compiler';
-import {Node} from "excel-formula-ast/index";
+
+import { tokenize } from 'excel-formula-tokenizer';
+import { buildTree, visit } from 'excel-formula-ast';
 
 describe('compiler', () => {
   it('enforces config.outputs', () => {
@@ -24,6 +26,7 @@ describe('formulaToCode', () => {
 
   it('compiles formula to dynamic', () => {
     const mockWorkBook = {
+      Workbook: { Names: [] },
       Sheets: {
         'Sheet1': {
           'A1': {
@@ -651,7 +654,7 @@ describe('CodeGen', () => {
           ' *\n' +
           ' */\n' +
           'function funSheet2$B2B4 () {\n' +
-          '  var data = [["Sheet2!B2"], ["Sheet2!B3"], 3];\n' +
+          '  var data = [1, 2, 3];\n' +
           '  var colCount = 1;\n' +
           '  var rowCount = 3;\n' +
           '\n' +
@@ -684,7 +687,41 @@ describe('CodeGen', () => {
     });
   });
 
-  describe('enterBinaryExpression(node)', () => {
-    it('');
+  describe('Binary operator code generation', () => {
+    let codeGen;
+    beforeEach(() => {
+      codeGen = new CodeGen({
+        Workbook: { Names: [] }
+      });
+      codeGen.setCurrentSheet('Sheet1');
+    });
+
+    it('generates correct equivalence for polynomial for 1 + 2 - 3', () => {
+      visit(buildTree(tokenize('1 + 2 - 3')), codeGen);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('MINUS(ADD(1, 2), 3)');
+    });
+
+    it('generates correct equivalence for polynomial for 1 * 2 + 3', () => {
+      visit(buildTree(tokenize('1 * 2 + 3')), codeGen);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('ADD(MULTIPLY(1, 2), 3)');
+    });
+
+    it('generates correct equivalence for polynomial for 1 * (2 + 3)', () => {
+      visit(buildTree(tokenize('1 * (2 + 3)')), codeGen);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('MULTIPLY(1, ADD(2, 3))');
+    });
+
+    it('generates correct equivalence for polynomial for 1 + 2 * 3', () => {
+      visit(buildTree(tokenize('1 + 2 * 3')), codeGen);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('ADD(1, MULTIPLY(2, 3))');
+    });
   });
 });
