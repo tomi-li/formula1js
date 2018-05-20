@@ -98,6 +98,25 @@ describe('Two param cells', () => {
   });
 });
 
+describe('Three param cells', () => {
+  const paramless = require('./output/paramless.js');
+
+  it('Must evaluate Sheet1!B25 = MATCH($B$24,$B$21:$B$23,0)', () => {
+    let actual = paramless.execute('Sheet1!B25');
+    expect(actual).to.be.equal(1);
+  });
+
+  it('Must evaluate Sheet1!B26 = MATCH($B$24,$B$21:$B$23,1)', () => {
+    let actual = paramless.execute('Sheet1!B26');
+    expect(actual).to.be.equal(1);
+  });
+
+  it('Must evaluate Sheet1!B27 = MATCH($B$24,$B$21:$B$23,-1)', () => {
+    let actual = paramless.execute('Sheet1!B27');
+    expect(actual).to.be.equal(1);
+  });
+});
+
 describe('Multiple param cells', () => {
   const paramless = require('./output/paramless.js');
 

@@ -6,6 +6,7 @@ import xlsx from 'xlsx';
 import { tokenize } from 'excel-formula-tokenizer';
 import { buildTree, visit } from 'excel-formula-ast';
 
+import { exportInto } from './funs';
 import Range from './range';
 import { getFunctionByOperator } from './binaryOperators';
 
@@ -45,12 +46,19 @@ export default function (config, excelFile) {
     return cellToFunModel(codeGen, cell);
   });
 
+  const EXCEL = {};
+  exportInto(EXCEL);
+
   return mainTemplate({
     inputMappings: inputs,
     outputMappings: JSON.stringify(outputs, null, 2),
     outputAddresses,
     publicSections: sections,
-    dynamicDataSections: codeGen.dynamicSections
+    dynamicDataSections: codeGen.dynamicSections,
+    extendedFunctions: _.map(_.entries(EXCEL), ([name, fn]) => ({
+      name,
+      definition: fn.toString()
+    }), '')
   });
 }
 
@@ -68,7 +76,7 @@ export function cellToFunModel(codeGen, cell) {
   } else if (formula) {
     const resolvedFormula = _.reduce(definedNames, (sum, current) => {
       return sum.replace(new RegExp(`\bcurrent.Name\b`), current.Ref)
-    }, formula);
+    }, safelyRemove$(formula));
 
     console.log(`resolved formula from "${formula}" => "${resolvedFormula}"`)
     console.log(`Compiling cell[${address}] with formula ${formula}...`);
@@ -412,8 +420,15 @@ export class CodeGen {
     this.buffer.push(')');
   }
 
-  enterUnaryExpression(unaryNode) {
+  enterUnaryExpression(node) {
+    console.log(node);
+    const { operator: value } = node;
 
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
+    }
   }
 
   enterScope() {

@@ -16,6 +16,9 @@
     {"cell":"Sheet1!B15"},
     {"cell":"Sheet1!B16"},
     {"cell":"Sheet1!B17"},
-    {"cell":"Sheet1!B18"}
+    {"cell":"Sheet1!B18"},
+    {"cell":"Sheet1!B25"},
+    {"cell":"Sheet1!B26"},
+    {"cell":"Sheet1!B27"}
   ]
 }
