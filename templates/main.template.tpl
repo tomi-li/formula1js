@@ -143,11 +143,15 @@ function execute(address) {
       $[key] = params[key];
     });
   }
-
-  switch (address) {
-    <% _.forEach(publicSections, function (section) { %>
-    case "<%= section.address %>": return (<%= section.definition %>)(); <% }) %>
-    default: throw new Error('Address not executable');
+  try {
+    switch (address) {
+      <% _.forEach(publicSections, function (section) { %>
+      case "<%= section.address %>": return (<%= section.definition %>)(); <% }) %>
+      default: return null;
+    }
+  } catch (e) {
+    console.warn('Cell ' + address + ' executed unsuccessful. Reason: ' + (e.message || 'Unknown'));
+    return null;
   }
 }
 exports.execute = execute;
