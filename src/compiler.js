@@ -277,9 +277,6 @@ export class CodeGen {
 
     let sheet = this.currentSheet;
     const [refSheet,] = node.left.key.indexOf('!') !== -1 ? node.left.key.split('!'): [sheet];
-    if (sheet !== refSheet) {
-      this.setCurrentSheet(refSheet);
-    }
 
     const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
     const [ec, er] = splitCellAddress(node.right.key); // end column vs end row

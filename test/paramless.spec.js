@@ -77,6 +77,11 @@ describe('Two param cells', () => {
     expect(actual).to.be.equal(11);
   });
 
+  it('Must evaluate Sheet1!G11 = SUM(Sheet2!B7:B10)', () => {
+    let actual = paramless.execute('Sheet1!G11');
+    expect(actual).to.be.equal(5555);
+  });
+
   it('Must evaluate Sheet1!B15 = SUM(SUM(1), SUM(2))', () =>  {
     let actual = paramless.execute('Sheet1!B15');
     expect(actual).to.be.equal(3);
