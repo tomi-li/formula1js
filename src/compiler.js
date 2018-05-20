@@ -386,7 +386,7 @@ export class CodeGen {
 
   enterText(node) {
     console.log(`text is ${node.value}`);
-    const value = `"${node.value}"`;
+    const value = serializeText(node.value);
 
     this.nodeStack.push(node);
     if (this.nthFunctionParam(node) > 0) {
@@ -502,7 +502,7 @@ export class CodeGen {
       dataType: cell.t,
       serialize() {
         switch (cell.t) {
-          case 's': return `"${cell.v}"`;
+          case 's': return serializeText(cell.v);
           default: return `${cell.v}`;
         }
       }
@@ -546,4 +546,21 @@ function splitCellAddress(addressString) {
   const resolvedAddress = safelyRemove$(addressString);
   const [c, r] = resolvedAddress.replace(/(?:\w+!)?(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
   return [c, parseInt(r, 10)];
+}
+
+/**
+ * Wrap single-line text into double quotation marks
+ * Wrap multi-line text into concatenation of string with newline character
+ *
+ * @param text
+ * @return {string}
+ */
+function serializeText(text) {
+  const lines = text.split('\r\n');
+
+  if (lines.length === 1) {
+    return `"${text}"`;
+  } else {
+    return `${lines.map(it => `"${it}\\n"`).join('\n\t\t + ')}`;
+  }
 }
