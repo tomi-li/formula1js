@@ -576,6 +576,23 @@ describe('CodeGen', () => {
       const mockWorkbook = {
         Workbook: { Names: [] },
         Sheets: {
+          Sheet1: {
+            B2: {
+              v: 10,
+              format: 'general',
+              dataType: 'number'
+            },
+            B3: {
+              v: 20,
+              format: 'general',
+              dataType: 'number'
+            },
+            B4: {
+              v: 30,
+              format: 'general',
+              dataType: 'number'
+            }
+          },
           Sheet2: {
             B2: {
               v: 1,
@@ -655,6 +672,66 @@ describe('CodeGen', () => {
           ' */\n' +
           'function funSheet2$B2B4 () {\n' +
           '  var data = [1, 2, 3];\n' +
+          '  var colCount = 1;\n' +
+          '  var rowCount = 3;\n' +
+          '\n' +
+          '  if (colCount === 1 || rowCount === 1) {\n' +
+          '    return data;\n' +
+          '  }\n' +
+          '\n' +
+          '  let slice = new Array(rowCount);\n' +
+          '\n' +
+          '  for (let i = 0; i < rowCount; i++) {\n' +
+          '    slice[i] = new Array(colCount);\n' +
+          '\n' +
+          '    for (let j = 0; j < colCount; j++) {\n' +
+          '      slice[i][j] = data[i * colCount + j];\n' +
+          '    }\n' +
+          '  }\n' +
+          '\n' +
+          '  return slice;\n' +
+          '}\n'
+        }
+      ]);
+    });
+
+    it('generates function with one cell-range param, which resides from another sheet', () => {
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell-range',
+            left: {
+              type: 'cell',
+              key: 'Sheet1!B2',
+              refType: 'relative'
+            },
+            right: {
+              type: 'cell',
+              key: 'B4',
+              refType: 'relative'
+            }
+          }
+        ]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCellRange(node.arguments[0]);
+      codeGen.exitCellRange(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($$("Sheet1!B2:B4"))');
+      expect(codeGen.dynamicSections).to.deep.equal([
+        {
+          name: 'funSheet1$B2B4',
+          address: 'Sheet1!B2:B4',
+          definition: '/**\n' +
+          ' * Evaluate data into a 1D or 2D array\n' +
+          ' *\n' +
+          ' */\n' +
+          'function funSheet1$B2B4 () {\n' +
+          '  var data = [10, 20, 30];\n' +
           '  var colCount = 1;\n' +
           '  var rowCount = 3;\n' +
           '\n' +
