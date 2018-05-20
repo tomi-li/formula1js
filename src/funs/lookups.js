@@ -43,3 +43,37 @@ export function MATCH(value, array, match_type) {
 
   return Number.NaN;
 }
+
+export function VLOOKUP(value, array, col_index, approx) {
+  if (typeof value === 'undefined') {
+    throw new Error();
+  }
+
+  if (!array || !array.length) {
+    throw new Error();
+  }
+
+  if (Number.isNaN(value)) {
+    return Number.NaN;
+  }
+
+  if (value instanceof Error) {
+    return value;
+  }
+
+  if (approx) {
+    for (var i = array.length - 1; i >= 0; i--) {
+      if (array[i][0] <= value) {
+        return array[i][col_index - 1];
+      }
+    }
+  } else {
+    for (var i = 0, len = array.length; i < len; i++) {
+      if (array[i][0] === value) {
+        return array[i][col_index - 1];
+      }
+    }
+  }
+
+  return null;
+}
