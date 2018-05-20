@@ -26,7 +26,7 @@ function inflate(evaluations, outputs) {
         setValue(obj, prop, evaluations[address]);
       } else {
         Object.keys(obj[prop]).forEach(function (key) {
-          visit(obj[key], key);
+          visit(obj[prop], key);
         })
       }
     }
@@ -125,8 +125,7 @@ var $ = {};
 function $$(cell) {
   switch (cell) {
     <% _.forEach(dynamicDataSections, function (section) { %>
-    case "<%= section.address %>": return <%= section.name %>();
-    <% }) %>
+    case "<%= section.address %>": return <%= section.name %>(); <% }) %>
   }
 }
 <% } %>
@@ -147,8 +146,7 @@ function execute(address) {
 
   switch (address) {
     <% _.forEach(publicSections, function (section) { %>
-    case "<%= section.address %>": return (<%= section.definition %>)();
-    <% }) %>
+    case "<%= section.address %>": return (<%= section.definition %>)(); <% }) %>
     default: throw new Error('Address not executable');
   }
 }
