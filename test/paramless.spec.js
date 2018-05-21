@@ -7,8 +7,8 @@ describe('Zero param cells', () => {
     // TODO paramless.reset()
   })
 
-  it('Must throw for "Sheet1!Z1"', () => {
-    expect(() => paramless.execute('Sheet1!Z1')).to.throw();
+  it('Must be null for "Sheet1!Z1"', () => {
+    expect(paramless.execute('Sheet1!Z1')).to.be.null;
   });
 
   it('Must evaluate Sheet1!B2 = NOW()', () => {
@@ -24,8 +24,8 @@ describe('One param cells', () => {
     // TODO paramless.reset()
   })
 
-  it('Must throw for "Sheet1!Z1"', () => {
-    expect(() => paramless.execute('Sheet1!Z1')).to.throw();
+  it('Must be null for "Sheet1!Z1"', () => {
+    expect(paramless.execute('Sheet1!Z1')).to.be.null;
   });
 
   it('Must evaluate Sheet1!B5 = SUM(1)', () => {

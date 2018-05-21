@@ -23,7 +23,11 @@ function inflate(evaluations, outputs) {
     if (typeof obj[prop] === 'object') {
       if ('cell' in obj[prop]) {
         var address = obj[prop].cell;
-        setValue(obj, prop, evaluations[address]);
+        if (typeof evaluations[address] === 'undefined' || evaluations[address] === null) {
+          delete obj[prop];
+        } else {
+          setValue(obj, prop, evaluations[address]);
+        }
       } else {
         Object.keys(obj[prop]).forEach(function (key) {
           visit(obj[prop], key);
@@ -143,11 +147,15 @@ function execute(address) {
       $[key] = params[key];
     });
   }
-
-  switch (address) {
-    <% _.forEach(publicSections, function (section) { %>
-    case "<%= section.address %>": return (<%= section.definition %>)(); <% }) %>
-    default: throw new Error('Address not executable');
+  try {
+    switch (address) {
+      <% _.forEach(publicSections, function (section) { %>
+      case "<%= section.address %>": return (<%= section.definition %>)(); <% }) %>
+      default: return null;
+    }
+  } catch (e) {
+    console.warn('Cell ' + address + ' executed unsuccessful. Reason: ' + (e.message || 'Unknown'));
+    return null;
   }
 }
 exports.execute = execute;
