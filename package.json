@@ -33,6 +33,7 @@
     "formulajs": "^1.0.8",
     "lodash": "^4.17.10",
     "minimist": "^1.2.0",
+    "webpack": "^4.8.3",
     "xlsx": "^0.12.12"
   },
   "devDependencies": {

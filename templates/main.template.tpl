@@ -6,8 +6,8 @@ Object.keys(formulajs).forEach(function(key) {
 });
 
 // Custom EXCEL function definitions
-<% _.forEach(extendedFunctions, function (fn) { %>
-EXCEL.<%= fn.name %> = <%= fn.definition %>; <% }) %>
+var funs = require("funs");
+funs.exportInto(EXCEL);
 // END of Custom EXCEL function definitions
 
 function inflate(evaluations, outputs) {
@@ -164,7 +164,7 @@ exports.execute = execute;
  * @param inputs {Map<string, anything>}
  * For example: { input1: 10 }
  */
-exports.executeFormulas = function(inputs) {
+exports.executeFormula = function(inputs) {
   var assignedInputs = {};
   var evaluations = {};
   <% _.forEach(inputMappings, function (varAddress, varName) { %>

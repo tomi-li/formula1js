@@ -6,7 +6,6 @@ import xlsx from 'xlsx';
 import { tokenize } from 'excel-formula-tokenizer';
 import { buildTree, visit } from 'excel-formula-ast';
 
-import { exportInto } from './funs';
 import Range from './range';
 import { getFunctionByOperator } from './binaryOperators';
 
@@ -46,19 +45,12 @@ export default function (config, excelFile) {
     return cellToFunModel(codeGen, cell);
   });
 
-  const EXCEL = {};
-  exportInto(EXCEL);
-
   return mainTemplate({
     inputMappings: inputs,
     outputMappings: JSON.stringify(outputs, null, 2),
     outputAddresses,
     publicSections: sections,
-    dynamicDataSections: codeGen.dynamicSections,
-    extendedFunctions: _.map(_.entries(EXCEL), ([name, fn]) => ({
-      name,
-      definition: fn.toString()
-    }), '')
+    dynamicDataSections: codeGen.dynamicSections
   });
 }
 
