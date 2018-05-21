@@ -23,7 +23,11 @@ function inflate(evaluations, outputs) {
     if (typeof obj[prop] === 'object') {
       if ('cell' in obj[prop]) {
         var address = obj[prop].cell;
-        setValue(obj, prop, evaluations[address]);
+        if (typeof evaluations[address] === 'undefined' || evaluations[address] === null) {
+          delete obj[prop];
+        } else {
+          setValue(obj, prop, evaluations[address]);
+        }
       } else {
         Object.keys(obj[prop]).forEach(function (key) {
           visit(obj[prop], key);
