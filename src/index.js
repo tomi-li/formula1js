@@ -2,6 +2,7 @@ import minimist from 'minimist';
 import compiler from './compiler';
 import fs from 'fs';
 import path from 'path';
+import webpack from 'webpack';
 
 const argv = minimist(process.argv.slice(2), {
   string: ['config','excel','output'],
@@ -28,8 +29,37 @@ const excelFile = fs.openSync(path.resolve(argv.excel), 'r');
 const config = JSON.parse(fs.readFileSync(path.resolve(argv.config), 'utf8'));
 console.log('config', config);
 const compiledJS = compiler(config, excelFile);
-const outputPath = path.resolve(argv.output);
+const outputFilepath = path.resolve(argv.output);
 
-console.log(`Writing to file system at ${outputPath}...`);
-fs.writeFileSync(outputPath, compiledJS, { flag: 'w' });
-console.log(`Done`);
+console.log(`Writing to file system at ${outputFilepath}...`);
+fs.writeFileSync(outputFilepath, compiledJS, { flag: 'w' });
+
+console.log('Bundling...');
+webpack({
+  entry: outputFilepath,
+  output: {
+    path: path.dirname(outputFilepath),
+    filename: `${path.parse(outputFilepath).name}.bundle.js`,
+    // library: 'formula',
+    libraryTarget: 'commonjs2'
+  },
+  context: __dirname,
+  resolve: {
+    modules: [
+      path.resolve(__dirname),
+      "node_modules"
+    ]
+  }
+}, (err, stats) => {
+  if (err) {
+    console.error('Could not bundle. Reason: ', err);
+    return;
+  } else {
+    console.log('Bundle successfully.');
+  }
+
+  process.stdout.write(stats.toString() + "\n");
+
+  console.log(`Done`);
+});
+

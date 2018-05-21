@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import moment from 'moment';
 
 describe('One param cells', () => {
-  const parametric = require('./output/parametric.js');
+  const parametric = require('./output/parametric.bundle');
   beforeEach(() => {
     // TODO parametric.reset()
   })
@@ -36,7 +36,7 @@ describe('One param cells', () => {
 });
 
 describe('Multiple param cells', () => {
-  const parametric = require('./output/parametric.js');
+  const parametric = require('./output/parametric.bundle');
 
   it('Must evaluate Sheet2!B14 = SUM(B2,B3)', () => {
     let actual;
@@ -52,11 +52,11 @@ describe('Multiple param cells', () => {
 });
 
 describe('Execute formulas', () => {
-  const parametric = require('./output/parametric.js');
+  const parametric = require('./output/parametric.bundle');
 
-  it('Must evaluate executeFormulas()', () => {
-    expect(parametric.executeFormulas({ input1: 0, input2: 0 })).to.deep.equal([0, 0]);
-    expect(parametric.executeFormulas({ input1: 1, input2: 2 })).to.deep.equal([1, 3]);
-    expect(parametric.executeFormulas({ input1: 2, input2: 4 })).to.deep.equal([2, 6]);
+  it('Must evaluate executeFormula()', () => {
+    expect(parametric.executeFormula({ input1: 0, input2: 0 })).to.deep.equal([0, 0]);
+    expect(parametric.executeFormula({ input1: 1, input2: 2 })).to.deep.equal([1, 3]);
+    expect(parametric.executeFormula({ input1: 2, input2: 4 })).to.deep.equal([2, 6]);
   });
 });

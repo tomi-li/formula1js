@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import moment from 'moment';
 
 describe('Zero param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
   beforeEach(() => {
     // TODO paramless.reset()
   })
@@ -19,7 +19,7 @@ describe('Zero param cells', () => {
 });
 
 describe('One param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
   beforeEach(() => {
     // TODO paramless.reset()
   })
@@ -60,7 +60,7 @@ describe('One param cells', () => {
 });
 
 describe('Two param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
 
   it('Must evaluate SUM(1,2)', () => {
     let actual = paramless.execute('Sheet1!B6');
@@ -104,7 +104,7 @@ describe('Two param cells', () => {
 });
 
 describe('Three param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
 
   it('Must evaluate Sheet1!B25 = MATCH($B$24,$B$21:$B$23,0)', () => {
     let actual = paramless.execute('Sheet1!B25');
@@ -123,7 +123,7 @@ describe('Three param cells', () => {
 });
 
 describe('Four param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
 
   it('Must evaluate Sheet1!B33 = VLOOKUP(0,$B$30:$D$32,3,FALSE())', () => {
     let actual = paramless.execute('Sheet1!B33');
@@ -172,7 +172,7 @@ describe('Four param cells', () => {
 });
 
 describe('Multiple param cells', () => {
-  const paramless = require('./output/paramless.js');
+  const paramless = require('./output/paramless.bundle');
 
   it('Must evaluate Sheet1!G8 = SUM(B5,B6,B7,B8)', () => {
     let actual = paramless.execute('Sheet1!G8');
