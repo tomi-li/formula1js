@@ -42,7 +42,15 @@ export default function (config, excelFile) {
     if (isRangeAddress(address)) {
       codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
-      return codeGen.makeRange(address);
+      const dynamicSection = codeGen.makeRange(address);
+      codeGen.dynamicSections.push(dynamicSection);
+      const name = `fun${address.replace(/\!/g,'$').replace(':','')}`;
+
+      return {
+        name,
+        address,
+        definition: `function ${name}() { return $$("${address}"); }`
+      };
     } else {
       codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
