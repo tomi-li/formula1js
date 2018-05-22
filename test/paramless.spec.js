@@ -179,3 +179,16 @@ describe('Multiple param cells', () => {
     expect(actual).to.be.equal(11);
   });
 });
+
+describe('Range extraction', function () {
+  const paramless = require('./output/paramless.bundle');
+
+  it('Must extract range B21:D23', () => {
+    let actual = paramless.execute('Sheet1!B21:D23');
+    expect(actual).to.be.deep.equal([
+      [1, 2, 3],
+      [10, 20, 30],
+      [100, 200, 300]
+    ]);
+  });
+});
