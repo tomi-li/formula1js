@@ -191,4 +191,13 @@ describe('Range extraction', function () {
       [100, 200, 300]
     ]);
   });
+
+  it('Must extract range B30:C31', () => {
+    let actual = paramless.execute('Sheet1!B30:C31');
+    expect(actual[0][0]).to.be.equal(1);
+    expect(actual[0][1]).to.be.equal(2);
+    expect(actual[1][0]).to.be.equal(10);
+    expect(actual[1][1]).to.be.an('error');
+    expect(actual[1][1].message).to.be.equal('#NUM!');
+  });
 });
