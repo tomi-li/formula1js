@@ -318,7 +318,11 @@ export class CodeGen {
             value = `$$("${cell.address}")`;
           } else {
             this.enterScope();
+
+            this.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
             const section = cellToFunModel(this, cell);
+            this.setCurrentSheet(sheet); // Back to previous sheet
+
             this.dynamicSections.push(section);
             this.exitScope();
 
