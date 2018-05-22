@@ -21,7 +21,7 @@ export function MATCH(value, array, match_type) {
       return index + 1;
     }
   } else if (match_type === 1) {
-    var index = Number.NaN;
+    var index = new Error('#N/A');
     var max;
     for (var i = 0, len = array.length; i < len; i++) {
       if (array[i] < max) {
