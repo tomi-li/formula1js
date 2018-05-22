@@ -63,6 +63,7 @@ typings/
 .idea
 dist/*.js
 **/output/**/*.js
+**/output/**/*.js.map
 .DS_Store
 ~$*.xlsx
 compiled.js

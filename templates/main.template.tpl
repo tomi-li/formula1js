@@ -126,10 +126,17 @@ var $ = {};
 <% }) %>
 
 <% if(dynamicDataSections && dynamicDataSections.length) { %>
+/**
+ * Evaluate a cell to either concrete value or error
+ */
 function $$(cell) {
-  switch (cell) {
-    <% _.forEach(dynamicDataSections, function (section) { %>
-    case "<%= section.address %>": return <%= section.name %>(); <% }) %>
+  try {
+    switch (cell) {
+      <% _.forEach(dynamicDataSections, function (section) { %>
+      case "<%= section.address %>": return <%= section.name %>(); <% }) %>
+    }
+  } catch (e) {
+    return e;
   }
 }
 <% } %>

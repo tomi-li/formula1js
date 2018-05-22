@@ -49,7 +49,8 @@ webpack({
       path.resolve(__dirname),
       "node_modules"
     ]
-  }
+  },
+  devtool: 'source-map'
 }, (err, stats) => {
   if (err) {
     console.error('Could not bundle. Reason: ', err);
