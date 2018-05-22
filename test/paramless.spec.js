@@ -127,7 +127,8 @@ describe('Four param cells', () => {
 
   it('Must evaluate Sheet1!B33 = VLOOKUP(0,$B$30:$D$32,3,FALSE())', () => {
     let actual = paramless.execute('Sheet1!B33');
-    expect(actual).to.be.null;
+    expect(actual).to.be.an('error');
+    expect(actual.message).to.be.equal('#N/A');
   });
 
   it('Must evaluate Sheet1!B34 = VLOOKUP(1,$B$30:$D$32,3,FALSE())', () => {
@@ -137,7 +138,8 @@ describe('Four param cells', () => {
 
   it('Must evaluate Sheet1!B35 = VLOOKUP(2,$B$30:$D$32,3,FALSE())', () => {
     let actual = paramless.execute('Sheet1!B35');
-    expect(actual).to.be.null;
+    expect(actual).to.be.an('error');
+    expect(actual.message).to.be.equal('#N/A');
   });
 
   it('Must evaluate Sheet1!B36 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
@@ -147,7 +149,8 @@ describe('Four param cells', () => {
 
   it('Must evaluate Sheet1!B37 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
     let actual = paramless.execute('Sheet1!B37');
-    expect(actual).to.be.null;
+    expect(actual).to.be.an('error');
+    expect(actual.message).to.be.equal('#N/A');
   });
 
   it('Must evaluate Sheet1!B38 = VLOOKUP(10,$B$30:$D$32,3,FALSE())', () => {
