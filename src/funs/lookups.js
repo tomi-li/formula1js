@@ -1,14 +1,18 @@
 export function MATCH(value, array, match_type) {
-  if (typeof value === 'undefined') {
-    throw new Error();
+  if (!array || !array.length) {
+    throw new Error('Invalid array');
   }
 
-  if (!array || !array.length) {
-    throw new Error();
+  if (value instanceof Error) {
+    return value;
+  }
+
+  if (typeof value === 'undefined') {
+    return new Error('#N/A');
   }
 
   if (Number.isNaN(value)) {
-    return Number.NaN;
+    return new Error('#N/A');
   }
 
   if (match_type === 0) {
@@ -21,7 +25,7 @@ export function MATCH(value, array, match_type) {
     var max;
     for (var i = 0, len = array.length; i < len; i++) {
       if (array[i] < max) {
-        throw new Error();
+        return new Error('#N/A');
       }
 
       if (array[i] <= value && (!max || array[i] >= max)) {
@@ -41,20 +45,20 @@ export function MATCH(value, array, match_type) {
     }
   }
 
-  return Number.NaN;
+  return new Error('#N/A');
 }
 
 export function VLOOKUP(value, array, col_index, approx) {
-  if (typeof value === 'undefined') {
-    throw new Error();
+  if (!array || !array.length) {
+    throw new Error('Invalid array');
   }
 
-  if (!array || !array.length) {
-    throw new Error();
+  if (typeof value === 'undefined') {
+    return new Error('#N/A');
   }
 
   if (Number.isNaN(value)) {
-    return Number.NaN;
+    return new Error('#N/A');
   }
 
   if (value instanceof Error) {
@@ -75,5 +79,5 @@ export function VLOOKUP(value, array, col_index, approx) {
     }
   }
 
-  return null;
+  return new Error('#N/A');
 }

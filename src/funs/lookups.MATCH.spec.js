@@ -11,8 +11,8 @@ describe('MATCH', () => {
       expect(MATCH(12, array, 0)).to.be.equal(3);
       expect(MATCH(13, array, 0)).to.be.equal(4);
 
-      expect(MATCH(1, array, 0)).to.be.NaN;
-      expect(MATCH(20, array, 0)).to.be.NaN;
+      expect(MATCH(1, array, 0)).to.be.an('error');
+      expect(MATCH(20, array, 0)).to.be.an('error');
     });
 
     it('Must find the index in an unsorted array', () => {
@@ -22,8 +22,8 @@ describe('MATCH', () => {
       expect(MATCH(11, array, 0)).to.be.equal(3);
       expect(MATCH(12, array, 0)).to.be.equal(4);
 
-      expect(MATCH(1, array, 0)).to.be.NaN;
-      expect(MATCH(20, array, 0)).to.be.NaN;
+      expect(MATCH(1, array, 0)).to.be.an('error');
+      expect(MATCH(20, array, 0)).to.be.an('error');
     });
   });
 
@@ -63,7 +63,7 @@ describe('MATCH', () => {
       expect(MATCH(33, array, -1)).to.be.equal(4);
       expect(MATCH(40, array, -1)).to.be.equal(4);
 
-      expect(MATCH(41, array, -1)).to.be.NaN;
+      expect(MATCH(41, array, -1)).to.be.an('error');
     });
 
     xit('Must find the index in an ansorted array', () => {
@@ -81,7 +81,7 @@ describe('MATCH', () => {
 
   describe('MATCH N/A', () => {
     it('Must return NaN for NaN lookup value', () => {
-      expect(MATCH(Number.NaN, [1,2,3,4], 0)).to.be.NaN;
+      expect(MATCH(Number.NaN, [1,2,3,4], 0)).to.be.an('error');
     });
   });
 });
