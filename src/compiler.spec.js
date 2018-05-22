@@ -129,6 +129,64 @@ describe('CodeGen', () => {
     });
   });
 
+  describe('makeRange', function () {
+    let codeGen;
+
+    beforeEach(() => {
+      codeGen = new CodeGen({
+        Workbook: { Names: [] },
+        Sheets: {
+          Sheet1: {
+            A1: { value: 1 },
+            A2: { value: 2 },
+            B1: { value: 3 },
+            B2: { value: 4 }
+          }
+        }
+      });
+    });
+
+    it('Must throw when lacking sheet name', () => {
+      expect(() => codeGen.makeRange('A1:B2')).to.throw();
+    });
+
+    it('Must throw when input is not a range', () => {
+      expect(() => codeGen.makeRange('Sheet1!A1')).to.throw();
+    });
+
+    it('Must resolve range Sheet1!A1:B2 to an array of addresses', () => {
+      expect(codeGen.makeRange('Sheet1!A1:B2')).to.deep.equal({
+        name: 'funSheet1$A1B2',
+        address: 'Sheet1!A1:B2',
+        definition: '/**\n' +
+        ' * Evaluate data into a 1D or 2D array\n' +
+        ' *\n' +
+        ' */\n' +
+        'function funSheet1$A1B2 () {\n' +
+        '  var data = [];\n' +
+        '  var colCount = 2;\n' +
+        '  var rowCount = 2;\n' +
+        '\n' +
+        '  if (colCount === 1 || rowCount === 1) {\n' +
+        '    return data;\n' +
+        '  }\n' +
+        '\n' +
+        '  let slice = new Array(rowCount);\n' +
+        '\n' +
+        '  for (let i = 0; i < rowCount; i++) {\n' +
+        '    slice[i] = new Array(colCount);\n' +
+        '\n' +
+        '    for (let j = 0; j < colCount; j++) {\n' +
+        '      slice[i][j] = data[i * colCount + j];\n' +
+        '    }\n' +
+        '  }\n' +
+        '\n' +
+        '  return slice;\n' +
+        '}\n'
+      });
+    });
+  });
+
   describe('assertSheetNameFromAddress(address)', () => {
     it('throws error when address does not have sheet name', () => {
       expect(() => CodeGen.assertSheetNameFromAddress('A1')).to.throw();

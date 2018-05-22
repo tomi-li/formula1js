@@ -39,10 +39,16 @@ export default function (config, excelFile) {
 
   const codeGen = new CodeGen(workbook, _.values(inputs).map(it => it.cell?it.cell:it));
   const sections = _.map(outputAddresses, (address) => {
-    codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+    if (isRangeAddress(address)) {
+      codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
-    const cell = codeGen.getCellByAddress(address);
-    return cellToFunModel(codeGen, cell);
+      return codeGen.makeRange(address);
+    } else {
+      codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+
+      const cell = codeGen.getCellByAddress(address);
+      return cellToFunModel(codeGen, cell);
+    }
   });
 
   return mainTemplate({
@@ -526,9 +532,94 @@ export class CodeGen {
     return output;
   }
 
+  makeRange(addressString) {
+    const [start, end] = addressString.split(':');
+    if (!end) {
+      throw CodeGen.InvalidEntry();
+    }
+    if (start === end) {
+      throw CodeGen.CorruptionError();
+    }
+
+    const refSheet = CodeGen.assertSheetNameFromAddress(start);
+    const [sc, sr] = splitCellAddress(start); // start column vs start row
+    const [ec, er] = splitCellAddress(end); // end column vs end row
+
+    if (sc.length > 1 || ec.leading > 1) {
+      throw CodeGen.NotImplemented();
+    }
+
+
+    let range;
+    if (sc < ec && sr < er) { // it's a 2D array
+      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, er - sr + 1);
+    } else if (sc < ec) {
+      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, 1);
+    } else if (sr < er) {
+      range = new Range(1, er - sr + 1);
+    } else {
+      range = new Range(1, 1);
+    }
+
+    let i = 0, j = 0, colCount = range.colCount;
+    for (let r = sr; r <= er; r++) {
+      j = 0;
+      for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
+        let address = `${refSheet}!${String.fromCharCode(c)}${r}`;
+        let cell = this.getCellByAddress(address);
+
+        let value;
+        if (this.isAnInputAddress(cell.address)) {
+          value = `$["${cell.address}"]`;
+        } if (cell.formula) {
+          const existing = this.dynamicSections.find(it => it.address === cell.address);
+          if (existing) {
+            value = `$$("${cell.address}")`;
+          } else {
+            this.enterScope();
+            const section = cellToFunModel(this, cell);
+            this.dynamicSections.push(section);
+            this.exitScope();
+
+            value = `$$("${cell.address}")`;
+          }
+
+          range.setValueAt(j, i, value);
+        } else if (typeof cell.value !== 'undefined') {
+          value = cell.value;
+        }
+        range.setValueAt(j, i, value);
+
+        j++;
+      }
+
+      i++;
+    }
+
+    // const existing = this.dynamicSections.find(it => it.address === cell.address);
+    const rangeAddress = `${refSheet}!${sc}${sr}:${ec}${er}`;
+    const name = `fun${refSheet}$${sc}${sr}${ec}${er}`;
+    const definition = rangeTemplate({
+      name,
+      colCount: range.colCount,
+      rowCount: range.rowCount,
+      dataStringified: range.serialize()
+    });
+
+    return {
+      name,
+      definition,
+      address: rangeAddress
+    };
+  }
+
   setCurrentSheet(sheetName) {
     this.currentSheet = sheetName;
   }
+}
+
+function isRangeAddress(addressString) {
+  return addressString && addressString.indexOf(':') !== -1;
 }
 
 function splitCellAddress(addressString) {

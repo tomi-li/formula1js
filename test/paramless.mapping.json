@@ -29,6 +29,7 @@
     {"cell":"Sheet1!B39"},
     {"cell":"Sheet1!B40"},
     {"cell":"Sheet1!B41"},
-    {"cell":"Sheet1!G11"}
+    {"cell":"Sheet1!G11"},
+    {"cell":"Sheet1!B21:D23"}
   ]
 }
