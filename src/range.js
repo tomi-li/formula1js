@@ -19,7 +19,7 @@ export default class Range {
         if (typeof it === 'function') {
           return it.name;
         } else if (typeof it === 'undefined') {
-          return null;
+          return 'null';
         } else if (_.startsWith(it, '$$')) {
           return '' + it
         } else if (_.isString(it)) {
@@ -31,8 +31,8 @@ export default class Range {
           return '' + it;
         }
       })
-      .compact()
-      .join(', ');
+      .join(', ')
+      .value();
 
     return `[${dataStringified}]`;
   }

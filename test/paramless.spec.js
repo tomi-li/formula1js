@@ -172,6 +172,22 @@ describe('Four param cells', () => {
     let actual = paramless.execute('Sheet1!B41');
     expect(actual).to.be.equal(300);
   });
+
+  it('Must evaluate BadSheet!B10 = VLOOKUP(0,$B$4:$C$6,2,0)', () => {
+    let actual = paramless.execute('BadSheet!B10');
+    expect(actual).to.be.an('error');
+    expect(actual.message).to.be.equal('#N/A');
+  });
+
+  it('Must evaluate BadSheet!B11 = VLOOKUP(2,$B$4:$C$6,2,0)', () => {
+    let actual = paramless.execute('BadSheet!B11');
+    expect(actual).to.be.equal(11);
+  });
+
+  it('Must evaluate BadSheet!B12 = VLOOKUP(3,$B$4:$C$6,2,0)', () => {
+    let actual = paramless.execute('BadSheet!B12');
+    expect(actual).to.be.equal(0);
+  });
 });
 
 describe('Multiple param cells', () => {
@@ -202,5 +218,10 @@ describe('Range extraction', function () {
     expect(actual[1][0]).to.be.equal(10);
     expect(actual[1][1]).to.be.an('error');
     expect(actual[1][1].message).to.be.equal('#NUM!');
+  });
+
+  it('Must extract range BadSheet!B9', () => {
+    let actual = paramless.execute('BadSheet!B9');
+    expect(actual).to.be.equal(26);
   });
 });

@@ -65,19 +65,27 @@ export function VLOOKUP(value, array, col_index, approx) {
     return value;
   }
 
+  var result = new Error('#N/A');
   if (approx) {
     for (var i = array.length - 1; i >= 0; i--) {
       if (array[i][0] <= value) {
-        return array[i][col_index - 1];
+        result = array[i][col_index - 1];
+        break;
       }
     }
   } else {
+    var result = new Error('#N/A');
     for (var i = 0, len = array.length; i < len; i++) {
       if (array[i][0] === value) {
-        return array[i][col_index - 1];
+        result = array[i][col_index - 1];
+        break;
       }
+    }
+
+    if (result === null) {
+      result = 0;
     }
   }
 
-  return new Error('#N/A');
+  return result;
 }

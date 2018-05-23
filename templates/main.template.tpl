@@ -43,7 +43,7 @@ function inflate(evaluations, outputs) {
 }
 
 function EQ(arg1, arg2) {
-  return arg1 === arg2;
+  return arg1 == arg2 || (!!arg1 == !!arg2);
 }
 
 function ADD(arg1, arg2) {

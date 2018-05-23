@@ -12,6 +12,15 @@ describe('VLOOKUP', () => {
       expect(VLOOKUP(10, array, 4, 0)).to.be.equal(132);
       expect(VLOOKUP(100, array, 4, 0)).to.be.equal(133);
     });
+
+    it('Must find the value in a sorted array with null members', () => {
+      const array = [[null, 10], [2, 11], [3, null]];
+
+      expect(VLOOKUP(0, array, 2, 0)).to.be.an('error');
+      expect(VLOOKUP(11, array, 2, 0)).to.be.an('error');
+      expect(VLOOKUP(2, array, 2, 0)).to.be.equal(11);
+      expect(VLOOKUP(3, array, 2, 0)).to.be.equal(0);
+    });
   });
 
   describe('VLOOKUP approx against number array', () => {
