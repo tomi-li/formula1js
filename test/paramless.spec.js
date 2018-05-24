@@ -43,6 +43,11 @@ describe('One param cells', () => {
     expect(actual).to.be.equal(6);
   });
 
+  it('Must evaluate Sheet1!AB9 = SUM(AB4:AD4)', () => {
+    let actual = paramless.execute('Sheet1!AB9');
+    expect(actual).to.be.equal(6);
+  });
+
   it('Must evaluate Sheet1!G5 = SUM(B5)', () => {
     let actual = paramless.execute('Sheet1!G5');
     expect(actual).to.be.equal(1);

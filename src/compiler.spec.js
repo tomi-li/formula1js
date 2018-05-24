@@ -137,10 +137,10 @@ describe('CodeGen', () => {
         Workbook: { Names: [] },
         Sheets: {
           Sheet1: {
-            A1: { value: 1 },
-            A2: { value: 2 },
-            B1: { value: 3 },
-            B2: { value: 4 }
+            A1: { v: 1 },
+            A2: { v: 2 },
+            B1: { v: 3 },
+            B2: { v: 4 }
           }
         }
       });
@@ -163,7 +163,7 @@ describe('CodeGen', () => {
         ' *\n' +
         ' */\n' +
         'function funSheet1$A1B2 () {\n' +
-        '  var data = [];\n' +
+        '  var data = [1, 3, 2, 4];\n' +
         '  var colCount = 2;\n' +
         '  var rowCount = 2;\n' +
         '\n' +
@@ -333,6 +333,91 @@ describe('CodeGen', () => {
           ' *\n' +
           ' */\n' +
           'function funSheet1$B4D4 () {\n' +
+          '  var data = [1, 2, 3];\n' +
+          '  var colCount = 3;\n' +
+          '  var rowCount = 1;\n' +
+          '\n' +
+          '  if (colCount === 1 || rowCount === 1) {\n' +
+          '    return data;\n' +
+          '  }\n' +
+          '\n' +
+          '  let slice = new Array(rowCount);\n' +
+          '\n' +
+          '  for (let i = 0; i < rowCount; i++) {\n' +
+          '    slice[i] = new Array(colCount);\n' +
+          '\n' +
+          '    for (let j = 0; j < colCount; j++) {\n' +
+          '      slice[i][j] = data[i * colCount + j];\n' +
+          '    }\n' +
+          '  }\n' +
+          '\n' +
+          '  return slice;\n' +
+          '}\n'
+        }
+      ]);
+    });
+
+    it('generates function with one cell-range param of upper range, all of which are static values', () => {
+      const mockWorkBook = {
+        Workbook: { Names: [] },
+        Sheets: {
+          'Sheet1': {
+            'AB4': {
+              v: 1,
+              format: 'general',
+              dataType: 'number'
+            },
+            'AC4': {
+              v: 2,
+              format: 'general',
+              dataType: 'number'
+            },
+            'AD4': {
+              v: 3,
+              format: 'general',
+              dataType: 'number'
+            }
+          }
+        }
+      };
+      codeGen = new CodeGen(mockWorkBook);
+      codeGen.setCurrentSheet('Sheet1');
+
+      const node = {
+        type: 'function',
+        name: 'SUM',
+        arguments: [
+          {
+            type: 'cell-range',
+            left: {
+              type: 'cell',
+              key: 'AB4',
+              refType: 'relative'
+            },
+            right: {
+              type: 'cell',
+              key: 'AD4',
+              refType: 'relative'
+            }
+          }]
+      };
+      codeGen.enterFunction(node);
+      codeGen.enterCellRange(node.arguments[0]);
+      codeGen.exitCellRange(node.arguments[0]);
+      codeGen.exitFunction(node);
+
+      const actual = codeGen.jsCode();
+      expect(actual).to.equal('EXCEL.SUM($$("Sheet1!AB4:AD4"))');
+      // NOTE: dynamic section definition below is a snapshot
+      expect(codeGen.dynamicSections).to.deep.equal([
+        {
+          name: 'funSheet1$AB4AD4',
+          address: 'Sheet1!AB4:AD4',
+          definition: '/**\n' +
+          ' * Evaluate data into a 1D or 2D array\n' +
+          ' *\n' +
+          ' */\n' +
+          'function funSheet1$AB4AD4 () {\n' +
           '  var data = [1, 2, 3];\n' +
           '  var colCount = 3;\n' +
           '  var rowCount = 1;\n' +

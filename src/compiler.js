@@ -8,15 +8,11 @@ import { buildTree, visit } from 'excel-formula-ast';
 
 import Range from './range';
 import { getFunctionByOperator } from './binaryOperators';
+import {decodeColumn, encodeColumn} from "./supports";
 
 const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/main.template.tpl'), 'utf8'));
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
 const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/range.template.tpl'), 'utf8'));
-
-
-function safelyRemove$(address) {
-  return _.replace(address, /\$/g, '');
-}
 
 /**
  * Compile Excel file against a given configuration to string
@@ -287,15 +283,15 @@ export class CodeGen {
     const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
     const [ec, er] = splitCellAddress(node.right.key); // end column vs end row
 
-    if (sc.length > 1 || ec.leading > 1) {
+    if (sc.length > 2 || ec.leading > 2) {
       throw CodeGen.NotImplemented();
     }
 
     let range;
     if (sc < ec && sr < er) { // it's a 2D array
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, er - sr + 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, er - sr + 1);
     } else if (sc < ec) {
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, 1);
     } else if (sr < er) {
       range = new Range(1, er - sr + 1);
     } else {
@@ -305,8 +301,8 @@ export class CodeGen {
     let i = 0, j = 0, colCount = range.colCount;
     for (let r = sr; r <= er; r++) {
       j = 0;
-      for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
-        let address = `${refSheet}!${String.fromCharCode(c)}${r}`;
+      for (let c = decodeColumn(sc); c <= decodeColumn(ec); c++) {
+        let address = `${refSheet}!${encodeColumn(c)}${r}`;
         let cell = this.getCellByAddress(address);
 
         let value;
@@ -499,7 +495,7 @@ export class CodeGen {
 
     const cell = this.workbook.Sheets[sheet][addr];
     if (cell === undefined) {
-      return {};
+      return new Error('#REF!');
     }
     return {
       address: `${sheet}!${addr}`,
@@ -557,16 +553,16 @@ export class CodeGen {
     const [sc, sr] = splitCellAddress(start); // start column vs start row
     const [ec, er] = splitCellAddress(end); // end column vs end row
 
-    if (sc.length > 1 || ec.leading > 1) {
+    if (sc.length > 2 || ec.leading > 2) {
       throw CodeGen.NotImplemented();
     }
 
 
     let range;
     if (sc < ec && sr < er) { // it's a 2D array
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, er - sr + 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, er - sr + 1);
     } else if (sc < ec) {
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, 1);
     } else if (sr < er) {
       range = new Range(1, er - sr + 1);
     } else {
@@ -576,8 +572,8 @@ export class CodeGen {
     let i = 0, j = 0, colCount = range.colCount;
     for (let r = sr; r <= er; r++) {
       j = 0;
-      for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
-        let address = `${refSheet}!${String.fromCharCode(c)}${r}`;
+      for (let c = decodeColumn(sc); c <= decodeColumn(ec); c++) {
+        let address = `${refSheet}!${encodeColumn(c)}${r}`;
         let cell = this.getCellByAddress(address);
 
         let value;
@@ -655,4 +651,8 @@ function serializeText(text) {
   } else {
     return `${lines.map(it => `"${it}\\n"`).join('\n\t\t + ')}`;
   }
+}
+
+function safelyRemove$(address) {
+  return _.replace(address, /\$/g, '');
 }

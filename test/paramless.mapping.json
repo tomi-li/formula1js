@@ -32,6 +32,7 @@
     {"cell":"Sheet1!G11"},
     {"cell":"Sheet1!B21:D23"},
     {"cell":"Sheet1!B30:C31"},
+    {"cell":"Sheet1!AB9"},
     {"cell":"BadSheet!B9"},
     {"cell":"BadSheet!B10"},
     {"cell":"BadSheet!B11"},
