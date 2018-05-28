@@ -1,4 +1,4 @@
-export function INDEX(array, row_index, col_index, area_num) {
+export function INDEX(array, index, col_index, area_num) {
   if (!array || !array.length) {
     throw new Error('Invalid array');
   }
@@ -6,8 +6,8 @@ export function INDEX(array, row_index, col_index, area_num) {
   if (array instanceof Error) {
     return array;
   }
-  if (row_index instanceof Error) {
-    return row_index;
+  if (index instanceof Error) {
+    return index;
   }
   if (col_index instanceof Error) {
     return col_index;
@@ -17,8 +17,14 @@ export function INDEX(array, row_index, col_index, area_num) {
     throw new Error('Not supported');
   }
 
-  if (!row_index && !col_index) {
+  if (typeof index === 'undefined' && typeof col_index === 'undefined') {
     return new Error('#VALUE!');
+  }
+
+  if (index < 0) {
+    return new Error('#VALUE!');
+  } else if (index === 0) {
+    index = 1;
   }
 
   if (array[0] instanceof Array) {
@@ -26,9 +32,9 @@ export function INDEX(array, row_index, col_index, area_num) {
       return new Error('#REF!');
     }
 
-    return array[row_index - 1][col_index - 1];
+    return array[index - 1][col_index - 1];
   } else {
-    return array[row_index - 1];
+    return array[index - 1];
   }
 }
 

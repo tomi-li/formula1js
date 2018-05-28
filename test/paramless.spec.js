@@ -125,6 +125,64 @@ describe('Three param cells', () => {
     let actual = paramless.execute('Sheet1!B27');
     expect(actual).to.be.equal(1);
   });
+
+  it('Must evaluate Sheet1!B47 ', () => {
+    let actual = paramless.execute('Sheet1!B47');
+    expect(actual).to.be.an('error');
+  });
+  it('Must evaluate Sheet1!B48', () => {
+    let actual = paramless.execute('Sheet1!B48');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B49', () => {
+    let actual = paramless.execute('Sheet1!B49');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B50', () => {
+    let actual = paramless.execute('Sheet1!B50');
+    expect(actual).to.be.equal(2);
+  });
+  it('Must evaluate Sheet1!B51', () => {
+    let actual = paramless.execute('Sheet1!B51');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B52', () => {
+    let actual = paramless.execute('Sheet1!B52');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B53', () => {
+    let actual = paramless.execute('Sheet1!B53');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B54', () => {
+    let actual = paramless.execute('Sheet1!B54');
+    expect(actual).to.be.equal(2);
+  });
+  it('Must evaluate Sheet1!B55', () => {
+    let actual = paramless.execute('Sheet1!B55');
+    expect(actual).to.be.equal(1);
+  });
+  it('Must evaluate Sheet1!B56', () => {
+    let actual = paramless.execute('Sheet1!B56');
+    expect(actual).to.be.equal(10);
+  });
+  xit('Must evaluate Sheet1!B57', () => {
+    // TODO Distinguish between 1D vs 2D array
+    let actual = paramless.execute('Sheet1!B57');
+    expect(actual).to.be.an('error');
+  });
+  it('Must evaluate Sheet1!B58', () => {
+    let actual = paramless.execute('Sheet1!B58');
+    expect(actual).to.be.an('error');
+  });
+  it('Must evaluate Sheet1!B59', () => {
+    let actual = paramless.execute('Sheet1!B59');
+    expect(actual).to.be.an('error');
+  });
+  it('Must evaluate Sheet1!B60', () => {
+    let actual = paramless.execute('Sheet1!B60');
+    expect(actual).to.be.an('error');
+  });
 });
 
 describe('Four param cells', () => {
