@@ -136,6 +136,7 @@ function $$(cell) {
       case "<%= section.address %>": return <%= section.name %>(); <% }) %>
     }
   } catch (e) {
+    console.warn(e.message);
     return e;
   }
 }
