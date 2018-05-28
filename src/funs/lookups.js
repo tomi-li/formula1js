@@ -1,3 +1,43 @@
+export function INDEX(array, index, col_index, area_num) {
+  if (!array || !array.length) {
+    throw new Error('Invalid array');
+  }
+
+  if (array instanceof Error) {
+    return array;
+  }
+  if (index instanceof Error) {
+    return index;
+  }
+  if (col_index instanceof Error) {
+    return col_index;
+  }
+
+  if (area_num) {
+    throw new Error('Not supported');
+  }
+
+  if (typeof index === 'undefined' && typeof col_index === 'undefined') {
+    return new Error('#VALUE!');
+  }
+
+  if (index < 0) {
+    return new Error('#VALUE!');
+  } else if (index === 0) {
+    index = 1;
+  }
+
+  if (array[0] instanceof Array) {
+    if (typeof col_index === 'undefined') {
+      return new Error('#REF!');
+    }
+
+    return array[index - 1][col_index - 1];
+  } else {
+    return array[index - 1];
+  }
+}
+
 export function MATCH(value, array, match_type) {
   if (!array || !array.length) {
     throw new Error('Invalid array');
