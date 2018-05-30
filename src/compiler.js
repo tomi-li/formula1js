@@ -3,10 +3,12 @@ import path from 'path';
 import _ from 'lodash';
 
 import xlsx from 'xlsx';
-import {tokenize} from 'excel-formula-tokenizer';
-import {buildTree, visit} from 'excel-formula-ast';
+import { tokenize } from 'excel-formula-tokenizer';
+import { buildTree, visit } from 'excel-formula-ast';
 
 import Range from './range';
+import { getFunctionByOperator } from './binaryOperators';
+import {decodeColumn, encodeColumn} from "./supports";
 
 const mainTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/main.template.tpl'), 'utf8'));
 const functionTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../templates/function.template.tpl'), 'utf8'));
@@ -20,25 +22,43 @@ const rangeTemplate = _.template(fs.readFileSync(path.resolve(__dirname + '/../t
  * @returns {string}
  */
 export default function (config, excelFile) {
-  const {inputs, outputs} = config;
-  if (!outputs || !outputs.length) {
+  const {input: inputs, output: outputs} = config;
+  const outputAddresses = extractOutputs(outputs);
+  if (!outputAddresses || !outputAddresses.length) {
     throw new Error('No outputs cell specified');
   }
   if (!excelFile) {
     throw new Error('No Excel file specified');
   }
 
-  const workbook = xlsx.read(excelFile, {type:'file', cellFormula: true});
+  const workbook = xlsx.read(excelFile, { type: 'file', cellFormula: true });
 
-  const codeGen = new CodeGen(workbook);
-  const sections = _.map(outputs, (address) => {
-    codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+  const codeGen = new CodeGen(workbook, _.values(inputs).map(it => it.cell?it.cell:it));
+  const sections = _.map(outputAddresses, (address) => {
+    if (isRangeAddress(address)) {
+      codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
 
-    const cell = codeGen.getCellByAddress(address);
-    return cellToFunModel(codeGen, cell);
+      const dynamicSection = codeGen.makeRange(address);
+      codeGen.dynamicSections.push(dynamicSection);
+      const name = `fun${address.replace(/\!/g,'$').replace(':','')}`;
+
+      return {
+        name,
+        address,
+        definition: `function ${name}() { return $$("${address}"); }`
+      };
+    } else {
+      codeGen.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
+
+      const cell = codeGen.getCellByAddress(address);
+      return cellToFunModel(codeGen, cell);
+    }
   });
 
   return mainTemplate({
+    inputMappings: inputs,
+    outputMappings: JSON.stringify(outputs, null, 2),
+    outputAddresses,
     publicSections: sections,
     dynamicDataSections: codeGen.dynamicSections
   });
@@ -49,13 +69,28 @@ export default function (config, excelFile) {
  * @param formula {string}
  */
 export function cellToFunModel(codeGen, cell) {
-  const {formula, address} = cell;
+  const {formula, address, serialize} = cell;
+  const definedNames = codeGen.workbook.Workbook.Names;
+  let code;
 
-  console.log(`Compiling cell[${address}] with formula ${formula}...`);
-  visit(buildTree(tokenize(formula)), codeGen);
+  if (codeGen.isAnInputAddress(address)) {
+    code = `$["${address}"]`;
+  } else if (formula) {
+    const resolvedFormula = _.reduce(definedNames, (sum, current) => {
+      return sum.replace(new RegExp(`\bcurrent.Name\b`), current.Ref)
+    }, safelyRemove$(formula));
 
-  const name = `fun${address.replace('!','$')}`;
-  const code = codeGen.jsCode();
+    console.log(`resolved formula from "${formula}" => "${resolvedFormula}"`)
+    console.log(`Compiling cell[${address}] with formula ${formula}...`);
+
+    visit(buildTree(tokenize(resolvedFormula)), codeGen);
+    code = codeGen.jsCode();
+  } else {
+    code = `${serialize()}`;
+  }
+
+  const name = `fun${address.replace('!', '$')}`;
+
   return {
     name,
     address,
@@ -63,6 +98,33 @@ export function cellToFunModel(codeGen, cell) {
   };
 }
 
+export function extractOutputs(outputMappings) {
+  const outputs = [];
+
+  extract(outputMappings);
+
+  return outputs;
+
+  function extract (entry) {
+    _.values(entry).forEach((maybeRef) => {
+      if (typeof maybeRef === 'object') {
+        if ('cell' in maybeRef) {
+          if (!maybeRef.cell) {
+            throw new Error('Invalid mapping config');
+          }
+
+          if (outputs.indexOf(maybeRef.cell) === -1) {
+            outputs.push(maybeRef.cell);
+          }
+        } else {
+          extract(maybeRef);
+        }
+      } else if (maybeRef instanceof Array) {
+        extract(maybeRef);
+      }
+    });
+  }
+}
 /**
  * JS CodeGenerator
  */
@@ -84,11 +146,20 @@ export class CodeGen {
       throw CodeGen.InvalidEntry();
     }
 
-    const [sheetName, ] = addressString.split('!');
+    const [sheetName,] = addressString.split('!');
     return sheetName;
   }
 
-  constructor(workbook) {
+  /**
+   *
+   * @param workbook {XLSX.Workbook} The Excel workbook to transform
+   * @param inputs {Array<string>} Optional addresses for runtime value inputs
+   */
+  constructor(workbook, inputs) {
+    if (!workbook) {
+      throw new Error('Invalid argument');
+    }
+
     const _buffer = [];
     const _nodeStack = [];
     this._scopes = [
@@ -105,6 +176,10 @@ export class CodeGen {
     this.workbook = workbook;
 
     this.dynamicSections = [];
+    this.inputs = (inputs || []).reduce((acc, item) => {
+      acc[item] = undefined;
+      return acc;
+    }, {});
   }
 
   get buffer() {
@@ -163,7 +238,9 @@ export class CodeGen {
 
     let value;
 
-    if (cell.formula) {
+    if (this.isAnInputAddress(cell.address)) {
+      value = `$["${cell.address}"]`;
+    } else if (cell.formula) {
       const existing = this.dynamicSections.find(it => it.address === cell.address);
       if (existing) {
         value = `$$("${cell.address}")`;
@@ -175,20 +252,16 @@ export class CodeGen {
 
         value = `$$("${cell.address}")`;
       }
-
-      if (this.nthFunctionParam(node) > 0) {
-        this.buffer.push(', ' + value);
-      } else {
-        this.buffer.push('' + value);
-      }
+    } else if (cell.dataType === 's') {
+      value = `"${cell.value}"`;
     } else {
       value = cell.value;
+    }
 
-      if (this.nthFunctionParam(node) > 0) {
-        this.buffer.push(', ' + value);
-      } else {
-        this.buffer.push('' + value);
-      }
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
     }
   }
 
@@ -205,25 +278,20 @@ export class CodeGen {
     }
 
     let sheet = this.currentSheet;
-    const refSheets = [node.left.key, node.right.key].map(it => (it.indexOf('!')!==-1)?it.split('!')[0]:'');
-    if ((refSheets[0] || refSheets[1]) && (refSheets[0] !== refSheets[1] || refSheets[0] !== sheet)) {
-      console.error(refSheets[0]);
-      console.error(refSheets[1]);
-      throw CodeGen.CorruptionError();
-    }
+    const [refSheet,] = node.left.key.indexOf('!') !== -1 ? node.left.key.split('!'): [sheet];
 
     const [sc, sr] = splitCellAddress(node.left.key); // start column vs start row
     const [ec, er] = splitCellAddress(node.right.key); // end column vs end row
 
-    if (sc.length > 1 || ec.leading > 1) {
+    if (sc.length > 2 || ec.leading > 2) {
       throw CodeGen.NotImplemented();
     }
 
     let range;
     if (sc < ec && sr < er) { // it's a 2D array
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, er - sr + 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, er - sr + 1);
     } else if (sc < ec) {
-      range = new Range(ec.charCodeAt(0) - sc.charCodeAt(0) + 1, 1);
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, 1);
     } else if (sr < er) {
       range = new Range(1, er - sr + 1);
     } else {
@@ -231,20 +299,26 @@ export class CodeGen {
     }
 
     let i = 0, j = 0, colCount = range.colCount;
-    for (let r = sr; r<=er; r++) {
+    for (let r = sr; r <= er; r++) {
       j = 0;
-      for (let c = sc.charCodeAt(0); c <= ec.charCodeAt(0); c++) {
-        let address = `${sheet}!${String.fromCharCode(c)}${r}`;
+      for (let c = decodeColumn(sc); c <= decodeColumn(ec); c++) {
+        let address = `${refSheet}!${encodeColumn(c)}${r}`;
         let cell = this.getCellByAddress(address);
 
-        if (cell.formula) {
-          let value;
+        let value;
+        if (this.isAnInputAddress(cell.address)) {
+          value = `$["${cell.address}"]`;
+        } if (cell.formula) {
           const existing = this.dynamicSections.find(it => it.address === cell.address);
           if (existing) {
             value = `$$("${cell.address}")`;
           } else {
             this.enterScope();
+
+            this.setCurrentSheet(CodeGen.assertSheetNameFromAddress(address));
             const section = cellToFunModel(this, cell);
+            this.setCurrentSheet(sheet); // Back to previous sheet
+
             this.dynamicSections.push(section);
             this.exitScope();
 
@@ -252,9 +326,10 @@ export class CodeGen {
           }
 
           range.setValueAt(j, i, value);
-        } else if (cell.value) {
-          range.setValueAt(j, i, cell.value);
+        } else if (typeof cell.value !== 'undefined') {
+          value = cell.value;
         }
+        range.setValueAt(j, i, value);
 
         j++;
       }
@@ -263,20 +338,22 @@ export class CodeGen {
     }
 
     // const existing = this.dynamicSections.find(it => it.address === cell.address);
-    const name = `fun${sheet}$${node.left.key}${node.right.key}`;
-    const rangeAddress = `${sheet}!${node.left.key}:${node.right.key}`;
-    const definition = rangeTemplate({
-      name,
-      colCount: range.colCount,
-      rowCount: range.rowCount,
-      dataStringified: range.serialize()
-    });
-    const section = {
-      name,
-      definition,
-      address: rangeAddress
-    };
-    this.dynamicSections.push(section);
+    const rangeAddress = `${refSheet}!${sc}${sr}:${ec}${er}`;
+    if (!this.dynamicSections.find(it => it.address === rangeAddress)) {
+      const name = `fun${refSheet}$${sc}${sr}${ec}${er}`;
+      const definition = rangeTemplate({
+        name,
+        colCount: range.colCount,
+        rowCount: range.rowCount,
+        dataStringified: range.serialize()
+      });
+      const section = {
+        name,
+        definition,
+        address: rangeAddress
+      };
+      this.dynamicSections.push(section);
+    }
 
     const value = `$$("${rangeAddress}")`;
     if (this.nthFunctionParam(node) > 0) {
@@ -294,7 +371,7 @@ export class CodeGen {
     console.log(`number is ${node.value}`);
     this.nodeStack.push(node);
 
-    const {value} = node;
+    const { value } = node;
     if (this.nthFunctionParam(node) !== -1) {
       if (this.nthFunctionParam(node) > 0) {
         this.buffer.push(', ' + value);
@@ -312,18 +389,49 @@ export class CodeGen {
 
   enterText(node) {
     console.log(`text is ${node.value}`);
+    const value = serializeText(node.value);
+
     this.nodeStack.push(node);
-    this.buffer.push(node.value);
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push(value);
+    }
   }
 
-  exitText(node) {}
+  exitText(node) {
+  }
 
-  enterLogical(node) {}
+  enterLogical(node) {
+  }
 
-  enterBinaryExpression(node) {}
+  enterBinaryExpression(node) {
+    console.log(`bin exp is ${node.operator}`);
+    this.nodeStack.push(node);
+    [node.left, node.right].forEach(it => it.parent = node);
+    const jsOperatorFunction = getFunctionByOperator(node.operator);
 
-  enterUnaryExpression(unaryNode) {
+    const value = `${jsOperatorFunction}(`;
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
+    }
+  }
 
+  exitBinaryExpression(node) {
+    this.buffer.push(')');
+  }
+
+  enterUnaryExpression(node) {
+    console.log(node);
+    const { operator: value } = node;
+
+    if (this.nthFunctionParam(node) > 0) {
+      this.buffer.push(', ' + value);
+    } else {
+      this.buffer.push('' + value);
+    }
   }
 
   enterScope() {
@@ -350,8 +458,16 @@ export class CodeGen {
 
   nthFunctionParam(childNode) {
     const node = childNode.parent;
-    if (node && node.arguments) {
-      return node.arguments.indexOf(childNode);
+    if (!node) {
+      return -1;
+    }
+
+    if (node.type === 'function') {
+      if (node && node.arguments) {
+        return node.arguments.indexOf(childNode);
+      }
+    } else if (node.type === 'binary-expression') {
+      return node.left === childNode ? 0 : node.right === childNode ? 1 : -1;
     }
 
     return -1;
@@ -365,8 +481,7 @@ export class CodeGen {
    */
   getCellByAddress(addressString) {
     let sheet, addr;
-    addressString = this.findRef(addressString);
-    addressString = this.safelyRemove$(addressString);
+    addressString = safelyRemove$(addressString);
 
     if (addressString.indexOf('!') !== -1) {
       [sheet, addr] = addressString.split('!');
@@ -379,12 +494,21 @@ export class CodeGen {
     console.log(`Accessing sheet ${sheet} cell ${addr}...`);
 
     const cell = this.workbook.Sheets[sheet][addr];
+    if (cell === undefined) {
+      return new Error('#REF!');
+    }
     return {
       address: `${sheet}!${addr}`,
       formula: cell.f,
       format: cell.F,
       value: cell.v,
-      dataType: cell.t
+      dataType: cell.t,
+      serialize() {
+        switch (cell.t) {
+          case 's': return serializeText(cell.v);
+          default: return `${cell.v}`;
+        }
+      }
     }
   }
 
@@ -396,10 +520,9 @@ export class CodeGen {
       : result.Ref
   }
 
-  safelyRemove$(address) {
-    return _.replace(address, /\$/g, '');
+  isAnInputAddress(address) {
+    return address && address in this.inputs;
   }
-
   /**
    * Return a JS code model
    * - type: VARIABLE | FUNCTION
@@ -417,12 +540,119 @@ export class CodeGen {
     return output;
   }
 
+  makeRange(addressString) {
+    const [start, end] = addressString.split(':');
+    if (!end) {
+      throw CodeGen.InvalidEntry();
+    }
+    if (start === end) {
+      throw CodeGen.CorruptionError();
+    }
+
+    const refSheet = CodeGen.assertSheetNameFromAddress(start);
+    const [sc, sr] = splitCellAddress(start); // start column vs start row
+    const [ec, er] = splitCellAddress(end); // end column vs end row
+
+    if (sc.length > 2 || ec.leading > 2) {
+      throw CodeGen.NotImplemented();
+    }
+
+
+    let range;
+    if (sc < ec && sr < er) { // it's a 2D array
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, er - sr + 1);
+    } else if (sc < ec) {
+      range = new Range(decodeColumn(ec) - decodeColumn(sc) + 1, 1);
+    } else if (sr < er) {
+      range = new Range(1, er - sr + 1);
+    } else {
+      range = new Range(1, 1);
+    }
+
+    let i = 0, j = 0, colCount = range.colCount;
+    for (let r = sr; r <= er; r++) {
+      j = 0;
+      for (let c = decodeColumn(sc); c <= decodeColumn(ec); c++) {
+        let address = `${refSheet}!${encodeColumn(c)}${r}`;
+        let cell = this.getCellByAddress(address);
+
+        let value;
+        if (this.isAnInputAddress(cell.address)) {
+          value = `$["${cell.address}"]`;
+        } if (cell.formula) {
+          const existing = this.dynamicSections.find(it => it.address === cell.address);
+          if (existing) {
+            value = `$$("${cell.address}")`;
+          } else {
+            this.enterScope();
+            const section = cellToFunModel(this, cell);
+            this.dynamicSections.push(section);
+            this.exitScope();
+
+            value = `$$("${cell.address}")`;
+          }
+
+          range.setValueAt(j, i, value);
+        } else if (typeof cell.value !== 'undefined') {
+          value = cell.value;
+        }
+        range.setValueAt(j, i, value);
+
+        j++;
+      }
+
+      i++;
+    }
+
+    // const existing = this.dynamicSections.find(it => it.address === cell.address);
+    const rangeAddress = `${refSheet}!${sc}${sr}:${ec}${er}`;
+    const name = `fun${refSheet}$${sc}${sr}${ec}${er}`;
+    const definition = rangeTemplate({
+      name,
+      colCount: range.colCount,
+      rowCount: range.rowCount,
+      dataStringified: range.serialize()
+    });
+
+    return {
+      name,
+      definition,
+      address: rangeAddress
+    };
+  }
+
   setCurrentSheet(sheetName) {
     this.currentSheet = sheetName;
   }
 }
 
+function isRangeAddress(addressString) {
+  return addressString && addressString.indexOf(':') !== -1;
+}
+
 function splitCellAddress(addressString) {
-  const [c,r] = addressString.replace(/(\$?[A-Z]*)(\$?\d*)/,"$1,$2").split(",");
+  const resolvedAddress = safelyRemove$(addressString);
+  const [c, r] = resolvedAddress.replace(/(?:\w+!)?(\$?[A-Z]*)(\$?\d*)/, "$1,$2").split(",");
   return [c, parseInt(r, 10)];
+}
+
+/**
+ * Wrap single-line text into double quotation marks
+ * Wrap multi-line text into concatenation of string with newline character
+ *
+ * @param text
+ * @return {string}
+ */
+function serializeText(text) {
+  const lines = text.split('\r\n');
+
+  if (lines.length === 1) {
+    return `"${text}"`;
+  } else {
+    return `${lines.map(it => `"${it}\\n"`).join('\n\t\t + ')}`;
+  }
+}
+
+function safelyRemove$(address) {
+  return _.replace(address, /\$/g, '');
 }
